@@ -64,31 +64,8 @@ class MailTextDecoder:
                         print(
                             f"[RECOVERY] decode_header: {enc=} decode failed ({e}), trying utf-8 ..."
                         )
-                # utf-8リカバリ
-                try:
-                    return_text = text.decode("utf-8", errors="strict")
-                    print(
-                        f"[RECOVERY] decode_header: used utf-8 fallback for {repr(text[:32])}"
-                    )
-                    out.append(return_text)
-                    continue
-                except Exception:
-                    pass
-                # latin1リカバリ
-                try:
-                    return_text = text.decode("latin1", errors="replace")
-                    print(
-                        f"[RECOVERY] decode_header: used latin1 fallback for {repr(text[:32])}"
-                    )
-                    out.append(return_text)
-                    continue
-                except Exception:
-                    pass
-                # 最後の手段：バイトrepr
-                print(
-                    f"[RECOVERY] decode_header: could not decode {repr(text[:32])}, outputting raw bytes."
-                )
-                out.append(repr(text))
+                # フォールバック関数を利用
+                out.append(self._decode_header_fallback(text))
             else:
                 out.append(str(text))
         return "".join(out)
@@ -108,6 +85,32 @@ class MailTextDecoder:
                 break
             lines.append(line)
         return "\n".join(lines)
+
+    def _decode_header_fallback(self, text: bytes) -> str:
+        """エンコーディング不明なヘッダー値のデコード用フォールバック"""
+        # utf-8リカバリ
+        try:
+            return_text = text.decode("utf-8", errors="strict")
+            print(
+                f"[RECOVERY] decode_header: used utf-8 fallback for {repr(text[:32])}"
+            )
+            return return_text
+        except Exception:
+            pass
+        # latin1リカバリ
+        try:
+            return_text = text.decode("latin1", errors="replace")
+            print(
+                f"[RECOVERY] decode_header: used latin1 fallback for {repr(text[:32])}"
+            )
+            return return_text
+        except Exception:
+            pass
+        # 最後の手段：バイトrepr
+        print(
+            f"[RECOVERY] decode_header: could not decode {repr(text[:32])}, outputting raw bytes."
+        )
+        return repr(text)
 
 
 class MailPatternMatcher:
