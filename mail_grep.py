@@ -52,10 +52,46 @@ class MailTextDecoder:
         if value is None:
             return ""
         parts = decode_header(value)
-        return "".join(
-            str(p[0], p[1] or "utf-8") if isinstance(p[0], bytes) else str(p[0])
-            for p in parts
-        )
+        out = []
+        for text, enc in parts:
+            if isinstance(text, bytes):
+                if enc:
+                    try:
+                        return_text = text.decode(enc, errors="strict")
+                        out.append(return_text)
+                        continue
+                    except Exception as e:
+                        print(
+                            f"[RECOVERY] decode_header: {enc=} decode failed ({e}), trying utf-8 ..."
+                        )
+                # utf-8リカバリ
+                try:
+                    return_text = text.decode("utf-8", errors="strict")
+                    print(
+                        f"[RECOVERY] decode_header: used utf-8 fallback for {repr(text[:32])}"
+                    )
+                    out.append(return_text)
+                    continue
+                except Exception:
+                    pass
+                # latin1リカバリ
+                try:
+                    return_text = text.decode("latin1", errors="replace")
+                    print(
+                        f"[RECOVERY] decode_header: used latin1 fallback for {repr(text[:32])}"
+                    )
+                    out.append(return_text)
+                    continue
+                except Exception:
+                    pass
+                # 最後の手段：バイトrepr
+                print(
+                    f"[RECOVERY] decode_header: could not decode {repr(text[:32])}, outputting raw bytes."
+                )
+                out.append(repr(text))
+            else:
+                out.append(str(text))
+        return "".join(out)
 
     def _iter_text_parts(self, msg):
         if msg.is_multipart():
