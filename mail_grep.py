@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from email import policy
 from email.header import decode_header
 from email.message import Message
@@ -83,13 +84,22 @@ class MailTextDecoder:
         result = []
         for part in self._iter_text_parts(msg):
             payload = part.get_payload(decode=True)
-            if payload:
-                charset = part.get_content_charset() or "utf-8"
-                try:
-                    text = payload.decode(charset, errors="replace")
-                except Exception:
-                    text = payload.decode("utf-8", errors="replace")
-                result.extend(text.splitlines())
+            if not payload:
+                continue
+            charset = part.get_content_charset() or "utf-8"
+            try:
+                text = payload.decode(charset, errors="replace")
+            except Exception:
+                text = payload.decode("utf-8", errors="replace")
+
+            content_type = part.get_content_type()
+            if content_type == "text/html":
+                # HTMLタグ除去
+                soup = BeautifulSoup(text, "html.parser")
+                # prettify=Falseな get_text(strip=False) で全テキスト
+                text = soup.get_text(separator="\n")
+            # どちらもsplitlinesでリスト化
+            result.extend(text.splitlines())
         return result
 
     def parse_message(self, raw_bytes: bytes) -> Message:
