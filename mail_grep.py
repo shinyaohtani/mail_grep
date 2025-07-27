@@ -8,6 +8,8 @@ import email
 import logging
 import os
 import re
+import sys
+import traceback
 
 from smart_logging import SmartLogging
 
@@ -28,11 +30,19 @@ class MailTextDecoder:
     """メール1通からデコード済み行群を取り出す"""
 
     def extract_header_lines(self, msg) -> list[str]:
-        return [
-            f"{k}: {self._decode_header(msg[k])}"
-            for k in ("Subject", "From", "To", "Date")
-            if msg[k]
-        ]
+        result = []
+        for k in ("Subject", "From", "To", "Date"):
+            try:
+                v = msg.get(k)
+                if v is None:
+                    continue
+                decoded = self._decode_header(v)
+                decoded = decoded.replace('\r', '').replace('\n', ' ')
+                result.append(f"{k}: {decoded}")
+            except Exception as e:
+                logging.warning(f"[MailGrep] Could not parse {k}: {e}")
+                result.append(f"{k}: [INVALID HEADER]")
+        return result
 
     def extract_body_lines(self, msg) -> list[str]:
         result = []
@@ -50,7 +60,27 @@ class MailTextDecoder:
     def parse_message(self, raw_bytes: bytes) -> Message:
         raw_str = self._decode_bytes(raw_bytes)
         header_str = self._extract_headers_section(raw_str)
+        header_str = self._sanitize_header_section(header_str)
         return email.message_from_string(header_str, policy=policy.default)
+
+    def _sanitize_header_section(self, header_str: str) -> str:
+        # ヘッダー値に混入したCR/LFをスペース化。folded header（正規の折り返し）はそのまま
+        sanitized = []
+        prev_colon = False
+        for line in header_str.splitlines():
+            if ":" in line:
+                # 新しいヘッダー行
+                key, val = line.split(":", 1)
+                val = val.replace("\r", " ").replace("\n", " ")
+                sanitized.append(f"{key}:{val}")
+                prev_colon = True
+            else:
+                # folded header
+                if prev_colon:
+                    line = line.replace("\r", " ").replace("\n", " ")
+                sanitized.append(line)
+                prev_colon = False
+        return "\n".join(sanitized)
 
     def _decode_header(self, value) -> str:
         if value is None:
@@ -251,4 +281,9 @@ if __name__ == "__main__":
             main()
         except Exception as e:
             logging.error(f"[MailGrep] Unhandled exception: {e}")
+            logging.error(
+                "Unhandled exception at top-level:\n" + traceback.format_exc()
+            )
+            print("==== FATAL TRACEBACK ====")
+            traceback.print_exc(file=sys.stdout)
             exit(1)
