@@ -13,8 +13,6 @@ import re
 import sys
 import traceback
 
-from smart_logging import SmartLogging
-
 
 def parse_date(value: str) -> str:
     try:
@@ -25,7 +23,6 @@ def parse_date(value: str) -> str:
 
 
 def remove_crlf(value: str) -> str:
-    # すべてのCR/LFを除去（ヘッダー用）
     if not value:
         return ""
     return value.replace("\r", "").replace("\n", " ")
@@ -80,7 +77,10 @@ class MailTextDecoder:
                 result.append(f"{k}: [INVALID HEADER]")
         return result
 
-    def extract_body_lines(self, msg) -> list[str]:
+    def extract_body_lines(self, msg) -> list[tuple[str, str]]:
+        """
+        本文パート（text/plain, text/html）を(行,パート種別)で返す
+        """
         result = []
         for part in self._iter_text_parts(msg):
             payload = part.get_payload(decode=True)
@@ -96,24 +96,26 @@ class MailTextDecoder:
             if content_type == "text/html":
                 # HTMLタグ除去
                 soup = BeautifulSoup(text, "html.parser")
-                # prettify=Falseな get_text(strip=False) で全テキスト
-                text = soup.get_text(separator="\n")
-            # どちらもsplitlinesでリスト化
-            result.extend(text.splitlines())
+                text_content = soup.get_text(separator="\n")
+                parttype = "html"
+            else:
+                text_content = text
+                parttype = "plain"
+            # 各行ごとにtupleで返す
+            for line in text_content.splitlines():
+                result.append((line, parttype))
         return result
 
     def parse_message(self, raw_bytes: bytes) -> Message:
         raw_str = self._decode_bytes(raw_bytes)
         header_str = self._extract_headers_section(raw_str)
         header_str = self._sanitize_header_section(header_str)
-        # CR/LFをヘッダー値から除去
         safe_header_str = "\n".join(
             [remove_crlf(line) for line in header_str.splitlines()]
         )
         try:
             return email.message_from_string(safe_header_str, policy=policy.default)
         except Exception:
-            # どうしてもパースできなければ空メールでごまかす
             return email.message_from_string("", policy=policy.default)
 
     def _sanitize_header_section(self, header_str: str) -> str:
@@ -133,13 +135,9 @@ class MailTextDecoder:
         return "\n".join(sanitized)
 
     def _normalize_header_value(self, v):
-        # email.message_from_string(..., policy=policy.default) の場合
-        # vはstr/None/Header/Group/Addressなど型が混在しうる
-        # → 常にstr or ""にする
         if v is None:
             return ""
         if hasattr(v, "addresses"):
-            # AddressHeader等
             try:
                 return str(v)
             except Exception:
@@ -210,36 +208,27 @@ class MailTextDecoder:
         return repr(text)
 
 
+# --- パターンマッチ ---
 class MailPatternMatcher:
     def __init__(self, pattern: str, flags=0):
         self._pattern = re.compile(pattern, flags)
 
-    def match_mail(
-        self, msg: Message, decoder: MailTextDecoder
-    ) -> tuple[str, str, str, str, str] | None:
+    def match_mail(self, msg: Message, decoder: MailTextDecoder) -> list[tuple]:
         header_lines = decoder.extract_header_lines(msg)
         body_lines = decoder.extract_body_lines(msg)
-        all_lines = header_lines + body_lines
-        for line in all_lines:
+        matches = []
+        # ヘッダーもbody同様にparttypeを付与（"header"固定）
+        for line in header_lines:
             if self._pattern.search(line):
-                return (
-                    decoder._decode_header(
-                        decoder._normalize_header_value(msg.get("Subject"))
-                    ),
-                    decoder._decode_header(
-                        decoder._normalize_header_value(msg.get("From"))
-                    ),
-                    decoder._decode_header(
-                        decoder._normalize_header_value(msg.get("To"))
-                    ),
-                    decoder._decode_header(
-                        decoder._normalize_header_value(msg.get("Date"))
-                    ),
-                    line.strip(),
-                )
-        return None
+                matches.append(("header", line))
+        # 本文: (line, parttype)
+        for line, parttype in body_lines:
+            if self._pattern.search(line):
+                matches.append((parttype, line))
+        return matches
 
 
+# --- CSV出力 ---
 class MailCsvExporter:
     def __init__(
         self,
@@ -272,26 +261,24 @@ class MailCsvExporter:
                     to_ = self._decoder._decode_header(
                         self._decoder._normalize_header_value(msg.get("To"))
                     )
+
                     hit_count = 0
-                    header_lines = self._decoder.extract_header_lines(msg)
-                    body_lines = self._decoder.extract_body_lines(msg)
-                    all_lines = header_lines + body_lines
-                    for line in all_lines:
-                        if self._matcher._pattern.search(line):
-                            hit_count += 1
-                            print(f"✓ {subj} ← {line.strip()}")
-                            rows.append(
-                                [
-                                    mail_id,
-                                    message_id,
-                                    hit_count,
-                                    subj,
-                                    from_,
-                                    to_,
-                                    date_str,
-                                    line.strip(),
-                                ]
-                            )
+                    for parttype, line in self._matcher.match_mail(msg, self._decoder):
+                        hit_count += 1
+                        print(f"✓ [{parttype}] {subj} ← {line.strip()}")
+                        rows.append(
+                            [
+                                mail_id,
+                                message_id,
+                                hit_count,
+                                subj,
+                                from_,
+                                to_,
+                                date_str,
+                                parttype,
+                                line.strip(),
+                            ]
+                        )
                     mail_id += 1
                 except Exception as e:
                     logging.warning(f"[MailGrep] Skipped {path}: {e}")
@@ -326,6 +313,7 @@ class MailCsvExporter:
                     "From",
                     "To",
                     "Date",
+                    "Matched Part",
                     "Matched Line",
                 ]
             )
@@ -333,6 +321,7 @@ class MailCsvExporter:
                 writer.writerow([self._sanitize_csv_field(v) for v in row])
 
 
+# --- egrep to Python正規表現（必要なら改良して下さい） ---
 def egrep_to_python_regex(pattern: str) -> str:
     posix_map = {
         r"\[[:digit:]\]": r"\d",
@@ -353,6 +342,7 @@ def egrep_to_python_regex(pattern: str) -> str:
     return pattern
 
 
+# --- 引数パーサ ---
 def create_parser():
     parser = argparse.ArgumentParser(
         description="egrep風にemlxメールをgrepし、CSVに出力するツール"
@@ -380,6 +370,7 @@ def create_parser():
     return parser
 
 
+# --- メイン処理 ---
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -394,17 +385,17 @@ def main():
 
 
 if __name__ == "__main__":
-    MAIL_GREP_DEBUG = os.getenv("MAIL_GREP_DEBUG", "0") == "1"
-    log_level = logging.DEBUG if MAIL_GREP_DEBUG else logging.INFO
-    with SmartLogging(log_level) as env:
-        env.set_stream_filter(True)
-        try:
-            main()
-        except Exception as e:
-            logging.error(f"[MailGrep] Unhandled exception: {e}")
-            logging.error(
-                "Unhandled exception at top-level:\n" + traceback.format_exc()
-            )
-            print("==== FATAL TRACEBACK ====")
-            traceback.print_exc(file=sys.stdout)
-            exit(1)
+    log_level = (
+        logging.DEBUG if os.getenv("MAIL_GREP_DEBUG", "0") == "1" else logging.INFO
+    )
+    logging.basicConfig(
+        level=log_level, format="%(asctime)s [%(levelname)s] %(message)s"
+    )
+    try:
+        main()
+    except Exception as e:
+        logging.error(f"[MailGrep] Unhandled exception: {e}")
+        logging.error("Unhandled exception at top-level:\n" + traceback.format_exc())
+        print("==== FATAL TRACEBACK ====")
+        traceback.print_exc(file=sys.stdout)
+        exit(1)
