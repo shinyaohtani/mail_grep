@@ -18,30 +18,31 @@ from smart_logging import SmartLogging
 def parse_date(value: str) -> str:
     try:
         dt = parsedate_to_datetime(value)
-        # UTCで出したい場合は .astimezone(timezone.utc)
         return dt.strftime("%Y-%m-%d %H:%M:%S")
     except Exception:
         return value  # パース不可はそのまま
 
 
-class MailFileFinder:
-    """emlxファイル探索クラス"""
+def remove_crlf(value: str) -> str:
+    # すべてのCR/LFを除去（ヘッダー用）
+    if not value:
+        return ""
+    return value.replace("\r", "").replace("\n", " ")
 
+
+class MailFileFinder:
     def __init__(self, root_dir: Path):
         self._root_dir = root_dir
 
     def find(self) -> list[Path]:
         return list(self._root_dir.rglob("*.emlx"))
 
-    # 4メソッドにしたい場合は将来 filter/include_dir 追加も可
-
 
 class MailTextDecoder:
-    """メール1通からデコード済み行群を取り出す"""
-
     def get_message_id(self, msg) -> str:
         try:
             v = msg.get("Message-ID")
+            v = self._normalize_header_value(v)
             return self._decode_header(v) if v else ""
         except Exception:
             return ""
@@ -49,18 +50,25 @@ class MailTextDecoder:
     def get_date(self, msg) -> str:
         try:
             v = msg.get("Date")
+            v = self._normalize_header_value(v)
             if not v:
                 return ""
             dt = parsedate_to_datetime(v)
             return dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
-            return self._decode_header(msg.get("Date") or "")
+            try:
+                v = msg.get("Date")
+                v = self._normalize_header_value(v)
+                return self._decode_header(v or "")
+            except Exception:
+                return ""
 
     def extract_header_lines(self, msg) -> list[str]:
         result = []
         for k in ("Subject", "From", "To", "Date"):
             try:
                 v = msg.get(k)
+                v = self._normalize_header_value(v)
                 if v is None:
                     continue
                 decoded = self._decode_header(v)
@@ -88,31 +96,62 @@ class MailTextDecoder:
         raw_str = self._decode_bytes(raw_bytes)
         header_str = self._extract_headers_section(raw_str)
         header_str = self._sanitize_header_section(header_str)
-        return email.message_from_string(header_str, policy=policy.default)
+        # CR/LFをヘッダー値から除去
+        safe_header_str = "\n".join(
+            [remove_crlf(line) for line in header_str.splitlines()]
+        )
+        try:
+            return email.message_from_string(safe_header_str, policy=policy.default)
+        except Exception:
+            # どうしてもパースできなければ空メールでごまかす
+            return email.message_from_string("", policy=policy.default)
 
     def _sanitize_header_section(self, header_str: str) -> str:
-        # ヘッダー値に混入したCR/LFをスペース化。folded header（正規の折り返し）はそのまま
         sanitized = []
         prev_colon = False
         for line in header_str.splitlines():
             if ":" in line:
-                # 新しいヘッダー行
                 key, val = line.split(":", 1)
                 val = val.replace("\r", " ").replace("\n", " ")
                 sanitized.append(f"{key}:{val}")
                 prev_colon = True
             else:
-                # folded header
                 if prev_colon:
                     line = line.replace("\r", " ").replace("\n", " ")
                 sanitized.append(line)
                 prev_colon = False
         return "\n".join(sanitized)
 
+    def _normalize_header_value(self, v):
+        # email.message_from_string(..., policy=policy.default) の場合
+        # vはstr/None/Header/Group/Addressなど型が混在しうる
+        # → 常にstr or ""にする
+        if v is None:
+            return ""
+        if hasattr(v, "addresses"):
+            # AddressHeader等
+            try:
+                return str(v)
+            except Exception:
+                return ""
+        if isinstance(v, bytes):
+            try:
+                return v.decode("utf-8", errors="replace")
+            except Exception:
+                return ""
+        if not isinstance(v, str):
+            return str(v)
+        return v
+
     def _decode_header(self, value) -> str:
         if value is None:
             return ""
-        parts = decode_header(value)
+        if isinstance(value, str):
+            value = remove_crlf(value)
+        try:
+            parts = decode_header(value)
+        except Exception:
+            return ""
         out = []
         for text, enc in parts:
             if isinstance(text, bytes):
@@ -124,15 +163,13 @@ class MailTextDecoder:
                         continue
                     except Exception as e:
                         status = f"decode_header: {enc=} decode failed ({e}), trying utf-8 ..."
-
-                # フォールバック関数を利用
                 out.append(self._decode_header_fallback(text, status))
             else:
                 out.append(str(text))
         return "".join(out)
 
     def _iter_text_parts(self, msg):
-        if msg.is_multipart():
+        if hasattr(msg, "is_multipart") and msg.is_multipart():
             return (p for p in msg.walk() if p.get_content_type().startswith("text/"))
         return (msg,)
 
@@ -148,7 +185,6 @@ class MailTextDecoder:
         return "\n".join(lines)
 
     def _decode_header_fallback(self, text: bytes, status: str) -> str:
-        """エンコーディング不明なヘッダー値のデコード用フォールバック"""
         try:
             return text.decode("utf-8", errors="strict")
         except Exception:
@@ -165,8 +201,6 @@ class MailTextDecoder:
 
 
 class MailPatternMatcher:
-    """パターン設定＆1通からマッチ判定・行抽出"""
-
     def __init__(self, pattern: str, flags=0):
         self._pattern = re.compile(pattern, flags)
 
@@ -179,18 +213,24 @@ class MailPatternMatcher:
         for line in all_lines:
             if self._pattern.search(line):
                 return (
-                    decoder._decode_header(msg["Subject"]),
-                    decoder._decode_header(msg["From"]),
-                    decoder._decode_header(msg["To"]),
-                    decoder._decode_header(msg["Date"]),
+                    decoder._decode_header(
+                        decoder._normalize_header_value(msg.get("Subject"))
+                    ),
+                    decoder._decode_header(
+                        decoder._normalize_header_value(msg.get("From"))
+                    ),
+                    decoder._decode_header(
+                        decoder._normalize_header_value(msg.get("To"))
+                    ),
+                    decoder._decode_header(
+                        decoder._normalize_header_value(msg.get("Date"))
+                    ),
                     line.strip(),
                 )
         return None
 
 
 class MailCsvExporter:
-    """全体制御＆CSV出力"""
-
     def __init__(
         self,
         finder: MailFileFinder,
@@ -208,32 +248,43 @@ class MailCsvExporter:
         mail_id = 1
         try:
             for path in self._finder.find():
-                raw = self._read_emlx(path)
-                msg = self._decoder.parse_message(raw)
-                message_id = self._decoder.get_message_id(msg)
-                date_str = self._decoder.get_date(msg)
-                subj = self._decoder._decode_header(msg.get("Subject"))
-                from_ = self._decoder._decode_header(msg.get("From"))
-                to_ = self._decoder._decode_header(msg.get("To"))
-                hit_count = 0
-                header_lines = self._decoder.extract_header_lines(msg)
-                body_lines = self._decoder.extract_body_lines(msg)
-                all_lines = header_lines + body_lines
-                for line in all_lines:
-                    if self._matcher._pattern.search(line):
-                        hit_count += 1
-                        print(f"✓ {subj} ← {line.strip()}")
-                        rows.append([
-                            mail_id,           # mail_id
-                            message_id,        # message_id
-                            hit_count,         # hit_id_in_mail
-                            subj,
-                            from_,
-                            to_,
-                            date_str,
-                            line.strip()
-                        ])
-                mail_id += 1
+                try:
+                    raw = self._read_emlx(path)
+                    msg = self._decoder.parse_message(raw)
+                    message_id = self._decoder.get_message_id(msg)
+                    date_str = self._decoder.get_date(msg)
+                    subj = self._decoder._decode_header(
+                        self._decoder._normalize_header_value(msg.get("Subject"))
+                    )
+                    from_ = self._decoder._decode_header(
+                        self._decoder._normalize_header_value(msg.get("From"))
+                    )
+                    to_ = self._decoder._decode_header(
+                        self._decoder._normalize_header_value(msg.get("To"))
+                    )
+                    hit_count = 0
+                    header_lines = self._decoder.extract_header_lines(msg)
+                    body_lines = self._decoder.extract_body_lines(msg)
+                    all_lines = header_lines + body_lines
+                    for line in all_lines:
+                        if self._matcher._pattern.search(line):
+                            hit_count += 1
+                            print(f"✓ {subj} ← {line.strip()}")
+                            rows.append(
+                                [
+                                    mail_id,
+                                    message_id,
+                                    hit_count,
+                                    subj,
+                                    from_,
+                                    to_,
+                                    date_str,
+                                    line.strip(),
+                                ]
+                            )
+                    mail_id += 1
+                except Exception as e:
+                    logging.warning(f"[MailGrep] Skipped {path}: {e}")
         except KeyboardInterrupt:
             logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
@@ -267,7 +318,7 @@ class MailCsvExporter:
                 ]
             )
             for row in rows:
-                writer.writerow(row)
+                writer.writerow([self._sanitize_csv_field(v) for v in row])
 
 
 def egrep_to_python_regex(pattern: str) -> str:
