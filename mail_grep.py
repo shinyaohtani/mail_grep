@@ -1,51 +1,54 @@
 from email import policy
 from email.header import decode_header
-from email.utils import parsedate_to_datetime
+from email.message import Message
 from pathlib import Path
 import argparse
 import csv
 import email
 import re
-import sys
 
 
-class EmlxPathCollector:
+class MailFileFinder:
+    """emlxファイル探索クラス"""
+
     def __init__(self, root_dir: Path):
         self._root_dir = root_dir
 
-    def collect(self) -> list[Path]:
+    def find(self) -> list[Path]:
         return list(self._root_dir.rglob("*.emlx"))
 
+    # 4メソッドにしたい場合は将来 filter/include_dir 追加も可
 
-class MailHeaderExtractor:
-    def extract(self, emlx_path: Path) -> tuple[str, str, str, str, str] | None:
-        try:
-            raw = self._read_raw_emlx(emlx_path)
-            raw_str = raw.decode("utf-8", errors="ignore")
-            match_line = self._search_target(raw_str)
-            if not match_line:
-                return None
 
-            header_str = self._extract_headers(raw_str)
-            msg = email.message_from_string(header_str, policy=policy.default)
+class MailTextDecoder:
+    """メール1通からデコード済み行群を取り出す"""
 
-            return (
-                self._decode_header(msg["Subject"]),
-                self._decode_header(msg["From"]),
-                self._decode_header(msg["To"]),
-                self._decode_date(msg["Date"]),
-                match_line.strip(),
-            )
-        except Exception:
-            return None
+    def extract_header_lines(self, msg) -> list[str]:
+        return [
+            f"{k}: {self._decode_header(msg[k])}"
+            for k in ("Subject", "From", "To", "Date")
+            if msg[k]
+        ]
 
-    def _read_raw_emlx(self, path: Path) -> bytes:
-        raw = path.read_bytes()
-        if raw[0:1].isdigit():
-            return raw[raw.find(b"\n") + 1 :]
-        return raw
+    def extract_body_lines(self, msg) -> list[str]:
+        result = []
+        for part in self._iter_text_parts(msg):
+            payload = part.get_payload(decode=True)
+            if payload:
+                charset = part.get_content_charset() or "utf-8"
+                try:
+                    text = payload.decode(charset, errors="replace")
+                except Exception:
+                    text = payload.decode("utf-8", errors="replace")
+                result.extend(text.splitlines())
+        return result
 
-    def _decode_header(self, value: str | None) -> str:
+    def parse_message(self, raw_bytes: bytes) -> Message:
+        raw_str = self._decode_bytes(raw_bytes)
+        header_str = self._extract_headers_section(raw_str)
+        return email.message_from_string(header_str, policy=policy.default)
+
+    def _decode_header(self, value) -> str:
         if value is None:
             return ""
         parts = decode_header(value)
@@ -54,67 +57,87 @@ class MailHeaderExtractor:
             for p in parts
         )
 
-    def _decode_date(self, value: str | None) -> str:
-        if value is None:
-            return ""
-        try:
-            dt = parsedate_to_datetime(value)
-            return dt.strftime("%Y-%m-%d %H:%M:%S")
-        except Exception:
-            return value
+    def _iter_text_parts(self, msg):
+        if msg.is_multipart():
+            return (p for p in msg.walk() if p.get_content_type().startswith("text/"))
+        return (msg,)
 
-    def _extract_headers(self, raw_str: str) -> str:
-        lines = raw_str.splitlines()
-        header_lines = []
-        for line in lines:
+    def _decode_bytes(self, raw: bytes) -> str:
+        return raw.decode("utf-8", errors="ignore")
+
+    def _extract_headers_section(self, raw_str: str) -> str:
+        lines = []
+        for line in raw_str.splitlines():
             if line.strip() == "":
                 break
-            header_lines.append(line)
-        return "\n".join(header_lines)
+            lines.append(line)
+        return "\n".join(lines)
 
-    def _search_target(self, raw_str: str) -> str | None:
-        for line in raw_str.splitlines():
-            if self._pattern.search(line):
-                return line
-        return None
 
-    def set_pattern(self, pattern: str, flags=0):
+class MailPatternMatcher:
+    """パターン設定＆1通からマッチ判定・行抽出"""
+
+    def __init__(self, pattern: str, flags=0):
         self._pattern = re.compile(pattern, flags)
 
+    def match_mail(
+        self, msg: Message, decoder: MailTextDecoder
+    ) -> tuple[str, str, str, str, str] | None:
+        header_lines = decoder.extract_header_lines(msg)
+        body_lines = decoder.extract_body_lines(msg)
+        all_lines = header_lines + body_lines
+        for line in all_lines:
+            if self._pattern.search(line):
+                return (
+                    decoder._decode_header(msg["Subject"]),
+                    decoder._decode_header(msg["From"]),
+                    decoder._decode_header(msg["To"]),
+                    decoder._decode_header(msg["Date"]),
+                    line.strip(),
+                )
+        return None
 
-class CsvWriter:
-    def __init__(self, output_path: Path):
+
+class MailCsvExporter:
+    """全体制御＆CSV出力"""
+
+    def __init__(
+        self,
+        finder: MailFileFinder,
+        decoder: MailTextDecoder,
+        matcher: MailPatternMatcher,
+        output_path: Path,
+    ):
+        self._finder = finder
+        self._decoder = decoder
+        self._matcher = matcher
         self._output_path = output_path
 
-    def write(self, rows: list[tuple[str, str, str, str, str]]) -> None:
-        with open(self._output_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["Subject", "From", "To", "Date", "Matched Line"])
-            writer.writerows(rows)
-
-
-class MailGrepExporter:
-    def __init__(self, source_dir: Path, output_path: Path, pattern: str, flags=0):
-        self._collector = EmlxPathCollector(source_dir)
-        self._extractor = MailHeaderExtractor()
-        self._extractor.set_pattern(pattern, flags)
-        self._writer = CsvWriter(output_path)
-
-    def export(self) -> None:
+    def process_all(self):
         rows = []
         try:
-            for path in self._collector.collect():
-                result = self._extractor.extract(path)
+            for path in self._finder.find():
+                raw = self._read_emlx(path)
+                msg = self._decoder.parse_message(raw)
+                result = self._matcher.match_mail(msg, self._decoder)
                 if result:
                     print("✓", result[0], "←", result[4])
                     rows.append(result)
         except KeyboardInterrupt:
             print("\n[INFO] 中断されました。ここまでの結果を保存します。")
         finally:
-            self._writer.write(rows)
-            print(
-                f"[INFO] {len(rows)}件を {self._writer._output_path} に保存しました。"
-            )
+            self._write_csv(rows)
+            print(f"[INFO] {len(rows)}件を {self._output_path} に保存しました。")
+
+    def _read_emlx(self, path: Path) -> bytes:
+        raw = path.read_bytes()
+        return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
+
+    def _write_csv(self, rows: list[tuple[str, str, str, str, str]]):
+        with open(self._output_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Subject", "From", "To", "Date", "Matched Line"])
+            writer.writerows(rows)
 
 
 def egrep_to_python_regex(pattern: str) -> str:
@@ -138,9 +161,6 @@ def egrep_to_python_regex(pattern: str) -> str:
 
 
 def create_parser():
-    """
-    mail_grep.py のコマンドライン引数パーサを生成して返す
-    """
     parser = argparse.ArgumentParser(
         description="egrep風にemlxメールをgrepし、CSVに出力するツール"
     )
@@ -170,10 +190,11 @@ def create_parser():
 if __name__ == "__main__":
     parser = create_parser()
     args = parser.parse_args()
-
     pattern = egrep_to_python_regex(args.pattern)
     flags = re.IGNORECASE if args.ignore_case else 0
-    source = args.source
-    output = args.output
 
-    MailGrepExporter(source, output, pattern, flags).export()
+    finder = MailFileFinder(args.source)
+    decoder = MailTextDecoder()
+    matcher = MailPatternMatcher(pattern, flags)
+    exporter = MailCsvExporter(finder, decoder, matcher, args.output)
+    exporter.process_all()
