@@ -286,6 +286,7 @@ class MailCsvExporter:
                 except Exception as e:
                     logging.warning(f"[MailGrep] Skipped {path}: {e}")
         except KeyboardInterrupt:
+            print()  # 改行を入れる
             logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
             self._write_csv(rows)
@@ -297,10 +298,11 @@ class MailCsvExporter:
         raw = path.read_bytes()
         return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
 
-    def _sanitize_csv_field(self, value: str) -> str:
+    def _sanitize_csv_field(self, value) -> str:
         if value is None:
             return ""
-        return value.replace("\r", "").replace("\n", "⏎")
+        s = str(value)
+        return s.replace("\r", "").replace("\n", "⏎")
 
     def _write_csv(self, rows):
         with open(self._output_path, "w", newline="", encoding="utf-8") as f:
@@ -309,7 +311,7 @@ class MailCsvExporter:
                 [
                     "mail_id",
                     "message_id",
-                    "hit_id_in_mail",
+                    "hit_id",
                     "Subject",
                     "From",
                     "To",
