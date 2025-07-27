@@ -1,6 +1,7 @@
 from email import policy
 from email.header import decode_header
 from email.message import Message
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 import argparse
 import csv
@@ -12,6 +13,15 @@ import sys
 import traceback
 
 from smart_logging import SmartLogging
+
+
+def parse_date(value: str) -> str:
+    try:
+        dt = parsedate_to_datetime(value)
+        # UTCで出したい場合は .astimezone(timezone.utc)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return value  # パース不可はそのまま
 
 
 class MailFileFinder:
@@ -29,6 +39,23 @@ class MailFileFinder:
 class MailTextDecoder:
     """メール1通からデコード済み行群を取り出す"""
 
+    def get_message_id(self, msg) -> str:
+        try:
+            v = msg.get("Message-ID")
+            return self._decode_header(v) if v else ""
+        except Exception:
+            return ""
+
+    def get_date(self, msg) -> str:
+        try:
+            v = msg.get("Date")
+            if not v:
+                return ""
+            dt = parsedate_to_datetime(v)
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return self._decode_header(msg.get("Date") or "")
+
     def extract_header_lines(self, msg) -> list[str]:
         result = []
         for k in ("Subject", "From", "To", "Date"):
@@ -37,7 +64,7 @@ class MailTextDecoder:
                 if v is None:
                     continue
                 decoded = self._decode_header(v)
-                decoded = decoded.replace('\r', '').replace('\n', ' ')
+                decoded = decoded.replace("\r", "").replace("\n", " ")
                 result.append(f"{k}: {decoded}")
             except Exception as e:
                 logging.warning(f"[MailGrep] Could not parse {k}: {e}")
@@ -178,14 +205,35 @@ class MailCsvExporter:
 
     def process_all(self):
         rows = []
+        mail_id = 1
         try:
             for path in self._finder.find():
                 raw = self._read_emlx(path)
                 msg = self._decoder.parse_message(raw)
-                result = self._matcher.match_mail(msg, self._decoder)
-                if result:
-                    print("✓", result[0], "←", result[4])
-                    rows.append(result)
+                message_id = self._decoder.get_message_id(msg)
+                date_str = self._decoder.get_date(msg)
+                subj = self._decoder._decode_header(msg.get("Subject"))
+                from_ = self._decoder._decode_header(msg.get("From"))
+                to_ = self._decoder._decode_header(msg.get("To"))
+                hit_count = 0
+                header_lines = self._decoder.extract_header_lines(msg)
+                body_lines = self._decoder.extract_body_lines(msg)
+                all_lines = header_lines + body_lines
+                for line in all_lines:
+                    if self._matcher._pattern.search(line):
+                        hit_count += 1
+                        print(f"✓ {subj} ← {line.strip()}")
+                        rows.append([
+                            mail_id,           # mail_id
+                            message_id,        # message_id
+                            hit_count,         # hit_id_in_mail
+                            subj,
+                            from_,
+                            to_,
+                            date_str,
+                            line.strip()
+                        ])
+                mail_id += 1
         except KeyboardInterrupt:
             logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
@@ -203,13 +251,23 @@ class MailCsvExporter:
             return ""
         return value.replace("\r", "").replace("\n", "⏎")
 
-    def _write_csv(self, rows: list[tuple[str, str, str, str, str]]):
+    def _write_csv(self, rows):
         with open(self._output_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["Subject", "From", "To", "Date", "Matched Line"])
+            writer.writerow(
+                [
+                    "mail_id",
+                    "message_id",
+                    "hit_id_in_mail",
+                    "Subject",
+                    "From",
+                    "To",
+                    "Date",
+                    "Matched Line",
+                ]
+            )
             for row in rows:
-                safe_row = [self._sanitize_csv_field(cell) for cell in row]
-                writer.writerow(safe_row)
+                writer.writerow(row)
 
 
 def egrep_to_python_regex(pattern: str) -> str:
