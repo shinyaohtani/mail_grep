@@ -102,12 +102,19 @@ class MailGrepExporter:
 
     def export(self) -> None:
         rows = []
-        for path in self._collector.collect():
-            result = self._extractor.extract(path)
-            if result:
-                print("✓", result[0], "←", result[4])
-                rows.append(result)
-        self._writer.write(rows)
+        try:
+            for path in self._collector.collect():
+                result = self._extractor.extract(path)
+                if result:
+                    print("✓", result[0], "←", result[4])
+                    rows.append(result)
+        except KeyboardInterrupt:
+            print("\n[INFO] 中断されました。ここまでの結果を保存します。")
+        finally:
+            self._writer.write(rows)
+            print(
+                f"[INFO] {len(rows)}件を {self._writer._output_path} に保存しました。"
+            )
 
 
 def egrep_to_python_regex(pattern: str) -> str:
