@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from email import policy
 from email.header import decode_header
 from email.message import Message
+from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 import argparse
@@ -12,6 +13,8 @@ import os
 import re
 import sys
 import traceback
+
+from smart_logging import SmartLogging
 
 
 def parse_date(value: str) -> str:
@@ -78,45 +81,68 @@ class MailTextDecoder:
         return result
 
     def extract_body_lines(self, msg) -> list[tuple[str, str]]:
-        """
-        本文パート（text/plain, text/html）を(行,パート種別)で返す
-        """
         result = []
         for part in self._iter_text_parts(msg):
             payload = part.get_payload(decode=True)
             if not payload:
                 continue
+
             charset = part.get_content_charset() or "utf-8"
             try:
-                text = payload.decode(charset, errors="replace")
+                html = payload.decode(charset, errors="replace")
             except Exception:
-                text = payload.decode("utf-8", errors="replace")
+                html = payload.decode("utf-8", errors="replace")
 
-            content_type = part.get_content_type()
-            if content_type == "text/html":
-                # HTMLタグ除去
-                soup = BeautifulSoup(text, "html.parser")
-                text_content = soup.get_text(separator="\n")
-                parttype = "html"
+            ctype = part.get_content_type()
+            if ctype == "text/html":
+                # ① 生HTMLをそのまま
+                result.append((html, "text/html"))
+
+                # ② BeautifulSoupでパース
+                soup = BeautifulSoup(html, "html.parser")
+                #    不要タグをまるごと削除
+                for tag in soup(["head", "script", "style", "meta", "title", "link"]):
+                    tag.decompose()
+
+                # ③ テキストのみ改行区切りで取得
+                text_only = soup.get_text(separator="\n", strip=True)
+                for line in text_only.splitlines():
+                    if line.strip():
+                        result.append((line, "text/html_textonly"))
+
+                # ④ さらに全文連結版も追加
+                concat = "".join(soup.stripped_strings)
+                if concat:
+                    result.append((concat, "text/html_concat"))
+
             else:
-                text_content = text
-                parttype = "plain"
-            # 各行ごとにtupleで返す
-            for line in text_content.splitlines():
-                result.append((line, parttype))
+                # text/plain
+                text = html
+                for line in text.splitlines():
+                    if line.strip():
+                        result.append((line, ctype))
+
         return result
 
     def parse_message(self, raw_bytes: bytes) -> Message:
-        raw_str = self._decode_bytes(raw_bytes)
-        header_str = self._extract_headers_section(raw_str)
-        header_str = self._sanitize_header_section(header_str)
-        safe_header_str = "\n".join(
-            [remove_crlf(line) for line in header_str.splitlines()]
-        )
+        """
+        .emlx の長さ行をスキップしたあと、
+        ヘッダー＋本文をそのまま BytesParser に渡す
+        """
+        # 1) 長さ行があればスキップ
+        data = raw_bytes
+        if data[:1].isdigit():
+            nl = data.find(b"\n")
+            if nl != -1:
+                data = data[nl + 1 :]
+
+        # 2) バイト列を丸ごとパース（ヘッダーも本文もそのまま）
+        parser = BytesParser(policy=policy.default)
         try:
-            return email.message_from_string(safe_header_str, policy=policy.default)
+            return parser.parsebytes(data)
         except Exception:
-            return email.message_from_string("", policy=policy.default)
+            # 万一エラーが起きたらフォールバック
+            return email.message_from_bytes(data, policy=policy.default)
 
     def _sanitize_header_section(self, header_str: str) -> str:
         sanitized = []
@@ -211,20 +237,22 @@ class MailTextDecoder:
 # --- パターンマッチ ---
 class MailPatternMatcher:
     def __init__(self, pattern: str, flags=0):
-        self._pattern = re.compile(pattern, flags)
+        self._pattern = re.compile(pattern, flags | re.DOTALL)
 
     def match_mail(self, msg: Message, decoder: MailTextDecoder) -> list[tuple]:
-        header_lines = decoder.extract_header_lines(msg)
-        body_lines = decoder.extract_body_lines(msg)
-        matches = []
-        # ヘッダーもbody同様にparttypeを付与（"header"固定）
-        for line in header_lines:
+        matches: list[tuple[str, str]] = []
+        # 1) ヘッダー行はこれまでどおり検索
+        for line in decoder.extract_header_lines(msg):
             if self._pattern.search(line):
                 matches.append(("header", line))
-        # 本文: (line, parttype)
-        for line, parttype in body_lines:
+
+        # 2) 本文行は text/plain と text/html_textonly のみ対象
+        for line, parttype in decoder.extract_body_lines(msg):
+            if parttype not in ("text/plain", "text/html_textonly"):
+                continue
             if self._pattern.search(line):
                 matches.append((parttype, line))
+
         return matches
 
 
@@ -250,6 +278,7 @@ class MailCsvExporter:
                 try:
                     raw = self._read_emlx(path)
                     msg = self._decoder.parse_message(raw)
+
                     message_id = self._decoder.get_message_id(msg)
                     date_str = self._decoder.get_date(msg)
                     subj = self._decoder._decode_header(
@@ -385,17 +414,17 @@ def main():
 
 
 if __name__ == "__main__":
-    log_level = (
-        logging.DEBUG if os.getenv("MAIL_GREP_DEBUG", "0") == "1" else logging.INFO
-    )
-    logging.basicConfig(
-        level=log_level, format="%(asctime)s [%(levelname)s] %(message)s"
-    )
-    try:
-        main()
-    except Exception as e:
-        logging.error(f"[MailGrep] Unhandled exception: {e}")
-        logging.error("Unhandled exception at top-level:\n" + traceback.format_exc())
-        print("==== FATAL TRACEBACK ====")
-        traceback.print_exc(file=sys.stdout)
-        exit(1)
+    MAIL_GREP_DEBUG = os.getenv("MAIL_GREP_DEBUG", "0") == "1"
+    log_level = logging.DEBUG if MAIL_GREP_DEBUG else logging.INFO
+    with SmartLogging(log_level) as env:
+        env.set_stream_filter(True)
+        try:
+            main()
+        except Exception as e:
+            logging.error(f"[MailGrep] Unhandled exception: {e}")
+            logging.error(
+                "Unhandled exception at top-level:\n" + traceback.format_exc()
+            )
+            print("==== FATAL TRACEBACK ====")
+            traceback.print_exc(file=sys.stdout)
+            exit(1)
