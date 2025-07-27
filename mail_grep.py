@@ -5,7 +5,11 @@ from pathlib import Path
 import argparse
 import csv
 import email
+import logging
+import os
 import re
+
+from smart_logging import SmartLogging
 
 
 class MailFileFinder:
@@ -96,9 +100,9 @@ class MailTextDecoder:
             return text.decode("latin1", errors="replace")
         except Exception:
             pass
-        print(f"[Failed to recover] {status}")
-        print(
-            f"[ERROR] decode_header: could not decode {repr(text[:40])}, outputting raw bytes."
+        logging.warning(f"[MailGrep] {status}")
+        logging.warning(
+            f"[MailGrep] decode_header: could not decode {repr(text[:40])}, outputting raw bytes."
         )
         return repr(text)
 
@@ -153,20 +157,29 @@ class MailCsvExporter:
                     print("✓", result[0], "←", result[4])
                     rows.append(result)
         except KeyboardInterrupt:
-            print("\n[INFO] 中断されました。ここまでの結果を保存します。")
+            logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
             self._write_csv(rows)
-            print(f"[INFO] {len(rows)}件を {self._output_path} に保存しました。")
+            logging.info(
+                f"[MailGrep] {len(rows)}件を {self._output_path} に保存しました。"
+            )
 
     def _read_emlx(self, path: Path) -> bytes:
         raw = path.read_bytes()
         return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
 
+    def _sanitize_csv_field(self, value: str) -> str:
+        if value is None:
+            return ""
+        return value.replace("\r", "").replace("\n", "⏎")
+
     def _write_csv(self, rows: list[tuple[str, str, str, str, str]]):
         with open(self._output_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Subject", "From", "To", "Date", "Matched Line"])
-            writer.writerows(rows)
+            for row in rows:
+                safe_row = [self._sanitize_csv_field(cell) for cell in row]
+                writer.writerow(safe_row)
 
 
 def egrep_to_python_regex(pattern: str) -> str:
@@ -216,7 +229,7 @@ def create_parser():
     return parser
 
 
-if __name__ == "__main__":
+def main():
     parser = create_parser()
     args = parser.parse_args()
     pattern = egrep_to_python_regex(args.pattern)
@@ -227,3 +240,15 @@ if __name__ == "__main__":
     matcher = MailPatternMatcher(pattern, flags)
     exporter = MailCsvExporter(finder, decoder, matcher, args.output)
     exporter.process_all()
+
+
+if __name__ == "__main__":
+    MAIL_GREP_DEBUG = os.getenv("MAIL_GREP_DEBUG", "0") == "1"
+    log_level = logging.DEBUG if MAIL_GREP_DEBUG else logging.INFO
+    with SmartLogging(log_level) as env:
+        env.set_stream_filter(True)
+        try:
+            main()
+        except Exception as e:
+            logging.error(f"[MailGrep] Unhandled exception: {e}")
+            exit(1)
