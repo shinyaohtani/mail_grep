@@ -1,11 +1,12 @@
-import csv
-import email
-import re
-import sys
 from email import policy
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+import argparse
+import csv
+import email
+import re
+import sys
 
 
 class EmlxPathCollector:
@@ -77,8 +78,8 @@ class MailHeaderExtractor:
                 return line
         return None
 
-    def set_pattern(self, pattern: str):
-        self._pattern = re.compile(pattern)
+    def set_pattern(self, pattern: str, flags=0):
+        self._pattern = re.compile(pattern, flags)
 
 
 class CsvWriter:
@@ -93,10 +94,10 @@ class CsvWriter:
 
 
 class MailGrepExporter:
-    def __init__(self, source_dir: Path, output_path: Path, pattern: str):
+    def __init__(self, source_dir: Path, output_path: Path, pattern: str, flags=0):
         self._collector = EmlxPathCollector(source_dir)
         self._extractor = MailHeaderExtractor()
-        self._extractor.set_pattern(pattern)
+        self._extractor.set_pattern(pattern, flags)
         self._writer = CsvWriter(output_path)
 
     def export(self) -> None:
@@ -109,13 +110,63 @@ class MailGrepExporter:
         self._writer.write(rows)
 
 
+def egrep_to_python_regex(pattern: str) -> str:
+    posix_map = {
+        r"\[[:digit:]\]": r"\d",
+        r"\[[:space:]\]": r"\s",
+        r"\[[:alnum:]\]": r"[A-Za-z0-9]",
+        r"\[[:alpha:]\]": r"[A-Za-z]",
+        r"\[[:lower:]\]": r"[a-z]",
+        r"\[[:upper:]\]": r"[A-Z]",
+        r"\[[:punct:]\]": r'[!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]',
+        r"$begin:math:display$[:blank:]$end:math:display$": r"[ \t]",
+        r"$begin:math:display$[:xdigit:]$end:math:display$": r"[A-Fa-f0-9]",
+        r"$begin:math:display$[:cntrl:]$end:math:display$": r"[\x00-\x1F\x7F]",
+        r"$begin:math:display$[:print:]$end:math:display$": r"[ -~]",
+        r"$begin:math:display$[:graph:]$end:math:display$": r"[!-~]",
+    }
+    for k, v in posix_map.items():
+        pattern = re.sub(k, lambda m, v=v: v, pattern)
+    return pattern
+
+
+def create_parser():
+    """
+    mail_grep.py のコマンドライン引数パーサを生成して返す
+    """
+    parser = argparse.ArgumentParser(
+        description="egrep風にemlxメールをgrepし、CSVに出力するツール"
+    )
+    parser.add_argument(
+        "pattern", metavar="PATTERN", help="検索したい正規表現（egrep互換）"
+    )
+    parser.add_argument(
+        "-i", "--ignore-case", action="store_true", help="大文字・小文字を無視する"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=Path("output_mail_summary.csv"),
+        help="出力CSVファイル名（デフォルト: output_mail_summary.csv）",
+    )
+    parser.add_argument(
+        "-s",
+        "--source",
+        type=Path,
+        default=Path.home() / "Library" / "Mail" / "V10",
+        help="emlxファイルの格納ディレクトリ",
+    )
+    return parser
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python -m mail_grep '<pattern>'")
-        sys.exit(1)
+    parser = create_parser()
+    args = parser.parse_args()
 
-    pattern = sys.argv[1]
-    source = Path.home() / "Library" / "Mail" / "V10"  # 適宜修正
-    output = Path("output_mail_summary.csv")
+    pattern = egrep_to_python_regex(args.pattern)
+    flags = re.IGNORECASE if args.ignore_case else 0
+    source = args.source
+    output = args.output
 
-    MailGrepExporter(source, output, pattern).export()
+    MailGrepExporter(source, output, pattern, flags).export()
