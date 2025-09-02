@@ -324,7 +324,11 @@ class MailCsvExporter:
                     hit_count = 0
                     for parttype, line in self._matcher.match_mail(msg, self._decoder):
                         hit_count += 1
-                        print(f"✓ [{parttype}] {subj} ← {line.strip()}")
+                        max_len = 50
+                        preview = line.strip()
+                        if len(preview) > max_len:
+                            preview = preview[:max_len] + "…"
+                        print(f"✓ [{parttype}] {subj} ← {preview}")
                         # 並べ替え用キーを先頭に持たせておく（書き出し時に除去）
                         rows.append(
                             [
