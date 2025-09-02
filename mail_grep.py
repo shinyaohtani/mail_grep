@@ -414,7 +414,7 @@ class MailCsvExporter:
                     parttype,
                     matched,
                 ) = row
-                excel_link = f'=HYPERLINK("{link}","Open Mail")' if link else ""
+                excel_link = f'=HYPERLINK("{link}","メール")' if link else ""
                 out = [
                     mail_id,
                     hit_id,
