@@ -327,8 +327,11 @@ class MailCsvExporter:
                         max_len = 50
                         preview = line.strip()
                         if len(preview) > max_len:
-                            preview = preview[:max_len] + "…"
-                        print(f"✓ [{parttype}] {subj} ← {preview}")
+                            preview = preview[:max_len] + "..."
+                        if hit_count == 1:
+                            print(f"✓ [{parttype}] hit! ({date_str}) {preview}")
+                        else:
+                            print(f"✓ [{parttype}] {preview}")
                         # 並べ替え用キーを先頭に持たせておく（書き出し時に除去）
                         rows.append(
                             [
@@ -359,9 +362,12 @@ class MailCsvExporter:
 
             rows.sort(key=sort_key)
 
+            # 2) メール件数を計算（hit_id == 1 の行のみカウント）
+            mail_count = sum(1 for row in rows if row[2] == 1)
+
             self._write_csv(rows)
             logging.info(
-                f"[MailGrep] {len(rows)}件を {self._output_path} に保存しました。"
+                f"[MailGrep] {mail_count}件を {self._output_path} に保存しました。"
             )
 
     def _read_emlx(self, path: Path) -> bytes:
