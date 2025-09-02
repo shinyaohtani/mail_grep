@@ -1,10 +1,12 @@
 from bs4 import BeautifulSoup
+from datetime import datetime
 from email import policy
 from email.header import decode_header
 from email.message import Message
 from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from urllib.parse import quote
 import argparse
 import csv
 import email
@@ -144,6 +146,30 @@ class MailTextDecoder:
             # 万一エラーが起きたらフォールバック
             return email.message_from_bytes(data, policy=policy.default)
 
+    def get_date_dt(self, msg) -> datetime | None:
+        """並べ替え用に Date を datetime で返す（失敗時は None）"""
+        try:
+            v = msg.get("Date")
+            v = self._normalize_header_value(v)
+            if not v:
+                return None
+            return parsedate_to_datetime(v)
+        except Exception:
+            return None
+
+    def build_mail_link(self, message_id: str) -> str:
+        """
+        Mail.app で開けるリンクを生成。
+        形式: message://%3Cmessage-id%3E  （< と > は URL エンコード）
+        """
+        if not message_id:
+            return ""
+        mid = message_id.strip()
+        if not mid.startswith("<"):
+            mid = f"<{mid}>"
+        # 角括弧や@を含めて完全にエンコード（Excel でもクリック可能）
+        return f"message://{quote(mid, safe='')}"
+
     def _sanitize_header_section(self, header_str: str) -> str:
         sanitized = []
         prev_colon = False
@@ -280,7 +306,10 @@ class MailCsvExporter:
                     msg = self._decoder.parse_message(raw)
 
                     message_id = self._decoder.get_message_id(msg)
-                    date_str = self._decoder.get_date(msg)
+                    date_str = self._decoder.get_date(
+                        msg
+                    )  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
+                    date_dt = self._decoder.get_date_dt(msg)  # 並べ替え用
                     subj = self._decoder._decode_header(
                         self._decoder._normalize_header_value(msg.get("Subject"))
                     )
@@ -290,31 +319,42 @@ class MailCsvExporter:
                     to_ = self._decoder._decode_header(
                         self._decoder._normalize_header_value(msg.get("To"))
                     )
+                    link = self._decoder.build_mail_link(message_id)
 
                     hit_count = 0
                     for parttype, line in self._matcher.match_mail(msg, self._decoder):
                         hit_count += 1
                         print(f"✓ [{parttype}] {subj} ← {line.strip()}")
+                        # 並べ替え用キーを先頭に持たせておく（書き出し時に除去）
                         rows.append(
                             [
-                                mail_id,
-                                message_id,
-                                hit_count,
-                                subj,
+                                date_dt,  # sort key (datetime or None)
+                                mail_id,  # mail_id
+                                hit_count,  # hit_id
+                                message_id,  # message_id
+                                link,  # link (Mail.app)
+                                date_str,  # Date (表示用)
                                 from_,
                                 to_,
-                                date_str,
-                                parttype,
-                                line.strip(),
+                                subj,
+                                parttype,  # Matched Part
+                                line.strip(),  # Matched Line
                             ]
                         )
                     mail_id += 1
                 except Exception as e:
                     logging.warning(f"[MailGrep] Skipped {path}: {e}")
         except KeyboardInterrupt:
-            print()  # 改行を入れる
+            print()
             logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
+            # 1) Date 降順でソート（None は末尾）
+            def sort_key(row):
+                dt = row[0]
+                return (dt is None, -(dt.timestamp() if dt else 0))
+
+            rows.sort(key=sort_key)
+
             self._write_csv(rows)
             logging.info(
                 f"[MailGrep] {len(rows)}件を {self._output_path} に保存しました。"
@@ -331,23 +371,52 @@ class MailCsvExporter:
         return s.replace("\r", "").replace("\n", "⏎")
 
     def _write_csv(self, rows):
-        with open(self._output_path, "w", newline="", encoding="utf-8") as f:
+        # 4) BOM 付き UTF-8 で保存（Excel 配慮）
+        with open(self._output_path, "w", newline="", encoding="utf-8-sig") as f:
             writer = csv.writer(f)
+            # 3) 指定順のカラムでヘッダ行を書き込み
             writer.writerow(
                 [
                     "mail_id",
-                    "message_id",
                     "hit_id",
-                    "Subject",
+                    "message_id",
+                    "link",
+                    "Date",
                     "From",
                     "To",
-                    "Date",
+                    "Subject",
                     "Matched Part",
                     "Matched Line",
                 ]
             )
             for row in rows:
-                writer.writerow([self._sanitize_csv_field(v) for v in row])
+                # 先頭の sort key を捨て、指定順に並べ替えて書き出し
+                (
+                    _,
+                    mail_id,
+                    hit_id,
+                    message_id,
+                    link,
+                    date_str,
+                    from_,
+                    to_,
+                    subj,
+                    parttype,
+                    matched,
+                ) = row
+                out = [
+                    mail_id,
+                    hit_id,
+                    message_id,
+                    link,
+                    date_str,
+                    from_,
+                    to_,
+                    subj,
+                    parttype,
+                    matched,
+                ]
+                writer.writerow([self._sanitize_csv_field(v) for v in out])
 
 
 # --- egrep to Python正規表現（必要なら改良して下さい） ---
