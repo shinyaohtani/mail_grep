@@ -160,7 +160,7 @@ class MailTextDecoder:
     def build_mail_link(self, message_id: str) -> str:
         """
         Mail.app で開けるリンクを生成。
-        形式: message://%3Cmessage-id%3E  （< と > は URL エンコード）
+        形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
         """
         if not message_id:
             return ""
@@ -168,7 +168,7 @@ class MailTextDecoder:
         if not mid.startswith("<"):
             mid = f"<{mid}>"
         # 角括弧や@を含めて完全にエンコード（Excel でもクリック可能）
-        return f"message://{quote(mid, safe='')}"
+        return f"message:{quote(mid, safe='')}"
 
     def _sanitize_header_section(self, header_str: str) -> str:
         sanitized = []
@@ -404,11 +404,12 @@ class MailCsvExporter:
                     parttype,
                     matched,
                 ) = row
+                excel_link = f'=HYPERLINK("{link}","Open Mail")' if link else ""
                 out = [
                     mail_id,
                     hit_id,
                     message_id,
-                    link,
+                    excel_link,
                     date_str,
                     from_,
                     to_,
