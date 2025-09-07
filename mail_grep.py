@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import traceback
+import unicodedata
 
 from smart_logging import SmartLogging
 
@@ -39,6 +40,27 @@ class MailFileFinder:
 
     def find(self) -> list[Path]:
         return list(self._root_dir.rglob("*.emlx"))
+
+
+def default_output_path_from_pattern(pat: str) -> Path:
+    """
+    検索文字列からデフォルト保存先:
+      results/<cleaned_head16>_<YYYY-MM-DD_HHMMSS>.csv
+    - 空白は "_"、正規表現の特殊文字は除去
+    - 先頭の非特殊文字のみから最大16文字
+    """
+    # NFKC正規化 → 空白を "_" に
+    s = unicodedata.normalize("NFKC", pat).replace(" ", "_")
+    # アルファベット・数字・アンダースコア以外を除去
+    s = re.sub(r"[^\w]", "", s)
+    # 連続 "_" の圧縮＆前後の "_" を除去
+    s = re.sub(r"_+", "_", s).strip("_")
+    # 先頭16文字（空なら "search"）
+    head = (s[:16] or "search").lower()
+    ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    out_dir = Path("results")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"{head}_{ts}.csv"
 
 
 class MailTextDecoder:
@@ -466,8 +488,8 @@ def create_parser():
         "-o",
         "--output",
         type=Path,
-        default=Path("output_mail_summary.csv"),
-        help="出力CSVファイル名（デフォルト: output_mail_summary.csv）",
+        default=None,
+        help="出力CSVファイル名（未指定時は自動生成: results/<pattern先頭16>_タイムスタンプ.csv）",
     )
     parser.add_argument(
         "-s",
@@ -483,13 +505,14 @@ def create_parser():
 def main():
     parser = create_parser()
     args = parser.parse_args()
+    output_path = args.output or default_output_path_from_pattern(args.pattern)
     pattern = egrep_to_python_regex(args.pattern)
     flags = re.IGNORECASE if args.ignore_case else 0
 
     finder = MailFileFinder(args.source)
     decoder = MailTextDecoder()
     matcher = MailPatternMatcher(pattern, flags)
-    exporter = MailCsvExporter(finder, decoder, matcher, args.output)
+    exporter = MailCsvExporter(finder, decoder, matcher, output_path)
     exporter.process_all()
 
 
