@@ -17,6 +17,14 @@ import sys
 import traceback
 import unicodedata
 
+from openpyxl import Workbook
+from openpyxl.cell.cell import Cell
+from openpyxl.utils import get_column_letter
+from openpyxl.workbook.workbook import Workbook as WorkbookType
+from openpyxl.worksheet.worksheet import Worksheet
+from typing import cast
+
+
 from smart_logging import SmartLogging
 
 
@@ -387,6 +395,8 @@ class MailCsvExporter:
             # 2) メール件数を計算（hit_id == 1 の行のみカウント）
             mail_count = sum(1 for row in rows if row[2] == 1)
 
+            # 拡張子が何であろうと2種類とも保存する
+            self._write_xlsx(rows)
             self._write_csv(rows)
             logging.info(
                 f"[MailGrep] {mail_count}件を {self._output_path} に保存しました。"
@@ -404,7 +414,8 @@ class MailCsvExporter:
 
     def _write_csv(self, rows):
         # 4) BOM 付き UTF-8 で保存（Excel 配慮）
-        with open(self._output_path, "w", newline="", encoding="utf-8-sig") as f:
+        csv_path = self._output_path.with_suffix(".csv")
+        with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
             writer = csv.writer(f)
             # 3) 指定順のカラムでヘッダ行を書き込み
             writer.writerow(
@@ -450,6 +461,101 @@ class MailCsvExporter:
                     matched,
                 ]
                 writer.writerow([self._sanitize_csv_field(v) for v in out])
+        logging.info(f"[MailGrep] excel {csv_path}")
+
+    def _write_xlsx(self, rows: list[list]) -> None:
+        """
+        XLSXで保存（openpyxl が必要）。
+        - リンク列はExcelのHYPERLINK関数を使う（CSVと同じ）
+        - 改行はCSVと同様に可視化（⏎）
+        """
+
+        wb: WorkbookType = Workbook()
+        ws: Worksheet = cast(Worksheet, wb.active)
+        ws.title = "results"
+
+        headers: list[str] = [
+            "mail_id",
+            "hit_id",
+            "message_id",
+            "link",
+            "Date",
+            "From",
+            "To",
+            "Subject",
+            "Matched Part",
+            "Matched Line",
+        ]
+        ws.append(headers)
+
+        for row in rows:
+            (
+                _,
+                mail_id,
+                hit_id,
+                message_id,
+                link,
+                date_str,
+                from_,
+                to_,
+                subj,
+                parttype,
+                matched,
+            ) = row
+
+            mail_id: int
+            hit_id: int
+            message_id: str
+            link: str
+            date_str: str
+            from_: str
+            to_: str
+            subj: str
+            parttype: str
+            matched: str
+
+            excel_link: str = f'=HYPERLINK("{link}","メール")' if link else ""
+            values: list[str | int] = [
+                mail_id,
+                hit_id,
+                self._sanitize_csv_field(message_id),
+                excel_link,
+                self._sanitize_csv_field(date_str),
+                self._sanitize_csv_field(from_),
+                self._sanitize_csv_field(to_),
+                self._sanitize_csv_field(subj),
+                self._sanitize_csv_field(parttype),
+                self._sanitize_csv_field(matched),
+            ]
+            ws.append(values)
+
+        # 列幅自動調整
+        try:
+            for i, col in enumerate(
+                ws.iter_cols(
+                    min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+                ),
+                1,
+            ):
+                max_length: int = 0
+                for cell in col:
+                    cell = cast(Cell, cell)
+                    try:
+                        cell_value: str = (
+                            str(cell.value) if cell.value is not None else ""
+                        )
+                        max_length = max(max_length, len(cell_value))
+                    except Exception:
+                        pass
+                col_letter: str = get_column_letter(i)
+                ws.column_dimensions[col_letter].width = min(max_length + 2, 60)
+        except Exception:
+            logging.warning("[MailGrep] 列幅の自動調整に失敗しました。")
+            pass
+
+        xlsx_path = self._output_path.with_suffix(".xlsx")
+        wb.save(xlsx_path)
+        logging.info(f"[MailGrep] excel {xlsx_path}")
 
 
 # --- egrep to Python正規表現（必要なら改良して下さい） ---
