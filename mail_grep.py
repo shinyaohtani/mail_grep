@@ -487,6 +487,8 @@ class MailCsvExporter:
             "Matched Line",
         ]
         ws.append(headers)
+        # フィルタ機能を有効化
+        ws.auto_filter.ref = ws.dimensions
 
         for row in rows:
             (
@@ -553,6 +555,15 @@ class MailCsvExporter:
             logging.warning("[MailGrep] 列幅の自動調整に失敗しました。")
             pass
 
+        # hit_id=1のみが表示されるようにデフォルトフィルタを設定（Excelで開いたとき）
+        try:
+            from openpyxl.worksheet.filters import CustomFilter, CustomFilters, FilterColumn
+            # hit_id列は2列目（index=1）
+            filter_col = FilterColumn(colId=1, customFilters=CustomFilters(customFilter=[CustomFilter(operator='equal', val='1')]))
+            ws.auto_filter.filterColumn = [filter_col]
+        except Exception:
+            logging.warning("[MailGrep] デフォルトフィルタの設定に失敗しました。")
+            pass
         xlsx_path = self._output_path.with_suffix(".xlsx")
         wb.save(xlsx_path)
         logging.info(f"[MailGrep] excel {xlsx_path}")
