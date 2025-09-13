@@ -557,9 +557,19 @@ class MailCsvExporter:
 
         # hit_id=1のみが表示されるようにデフォルトフィルタを設定（Excelで開いたとき）
         try:
-            from openpyxl.worksheet.filters import CustomFilter, CustomFilters, FilterColumn
+            from openpyxl.worksheet.filters import (
+                CustomFilter,
+                CustomFilters,
+                FilterColumn,
+            )
+
             # hit_id列は2列目（index=1）
-            filter_col = FilterColumn(colId=1, customFilters=CustomFilters(customFilter=[CustomFilter(operator='equal', val='1')]))
+            filter_col = FilterColumn(
+                colId=1,
+                customFilters=CustomFilters(
+                    customFilter=[CustomFilter(operator="equal", val="1")]
+                ),
+            )
             ws.auto_filter.filterColumn = [filter_col]
         except Exception:
             logging.warning("[MailGrep] デフォルトフィルタの設定に失敗しました。")
