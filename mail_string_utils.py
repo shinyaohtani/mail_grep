@@ -1,8 +1,7 @@
 from __future__ import annotations
-
 from email.header import decode_header
-import logging
 from typing import Any, Iterable
+import logging
 
 
 class CsvFieldText:
@@ -51,7 +50,7 @@ class EncodedHeader:
     def decode(value: str | None) -> str:
         if value is None:
             return ""
-        cleaned: str = RawHeaderText.remove_crlf(value)
+        cleaned: str = EncodedHeader.remove_crlf(value)
         try:
             parts: Iterable[tuple[bytes | str, str | None]] = decode_header(cleaned)
         except Exception:
@@ -89,45 +88,9 @@ class EncodedHeader:
         )
         return repr(text)
 
-
-class RawHeaderText:
-    """CRLFの扱いやヘッダ部抽出を担う“生ヘッダ文字列”。"""
-
     @staticmethod
     def remove_crlf(value: str) -> str:
         if not value:
             return ""
         # 既存仕様：CR除去、LFはスペースに
         return value.replace("\r", "").replace("\n", " ")
-
-    @staticmethod
-    def sanitize_section(header_str: str) -> str:
-        sanitized: list[str] = []
-        prev_colon: bool = False
-        for line in header_str.splitlines():
-            if ":" in line:
-                key: str
-                val: str
-                key, val = line.split(":", 1)
-                val = val.replace("\r", " ").replace("\n", " ")
-                sanitized.append(f"{key}:{val}")
-                prev_colon = True
-            else:
-                if prev_colon:
-                    line = line.replace("\r", " ").replace("\n", " ")
-                sanitized.append(line)
-                prev_colon = False
-        return "\n".join(sanitized)
-
-    @staticmethod
-    def decode_bytes(raw: bytes) -> str:
-        return raw.decode("utf-8", errors="ignore")
-
-    @staticmethod
-    def headers_section(raw_str: str) -> str:
-        lines: list[str] = []
-        for line in raw_str.splitlines():
-            if line.strip() == "":
-                break
-            lines.append(line)
-        return "\n".join(lines)
