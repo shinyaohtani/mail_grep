@@ -13,7 +13,7 @@ import email
 import logging
 
 from mail_profile import MailProfile
-from mail_string_utils import MailStringUtils
+from mail_string_utils import AnyText, EncodedHeader
 from search_pattern import SearchPattern
 
 
@@ -48,28 +48,28 @@ class _MailHeaders:
 
     def id_str(self) -> str:
         try:
-            v: str | None = MailStringUtils.stringify(self._msg.get("Message-ID"))
-            return MailStringUtils.decode_header(v) if v else ""
+            v: str | None = AnyText.to_str(self._msg.get("Message-ID"))
+            return EncodedHeader.decode(v) if v else ""
         except Exception:
             return ""
 
     def date_str(self) -> str:
         try:
-            v: str | None = MailStringUtils.stringify(self._msg.get("Date"))
+            v: str | None = AnyText.to_str(self._msg.get("Date"))
             if not v:
                 return ""
             dt: datetime = parsedate_to_datetime(v)
             return dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             try:
-                v2: str | None = MailStringUtils.stringify(self._msg.get("Date"))
-                return MailStringUtils.decode_header(v2 or "")
+                v2: str | None = AnyText.to_str(self._msg.get("Date"))
+                return EncodedHeader.decode(v2 or "")
             except Exception:
                 return ""
 
     def date_dt(self) -> datetime | None:
         try:
-            v: str | None = MailStringUtils.stringify(self._msg.get("Date"))
+            v: str | None = AnyText.to_str(self._msg.get("Date"))
             return parsedate_to_datetime(v) if v else None
         except Exception:
             return None
@@ -87,10 +87,10 @@ class _MailHeaders:
         result: list[str] = []
         for k in ("Subject", "From", "To", "Date"):
             try:
-                v: str | None = MailStringUtils.stringify(self._msg.get(k))
+                v: str | None = AnyText.to_str(self._msg.get(k))
                 if v is None:
                     continue
-                decoded: str = MailStringUtils.decode_header(v)
+                decoded: str = EncodedHeader.decode(v)
                 decoded = decoded.replace("\r", "").replace("\n", " ")
                 result.append(f"{k}: {decoded}")
             except Exception as e:
@@ -99,16 +99,16 @@ class _MailHeaders:
         return result
 
     def subj(self) -> str:
-        v: str | None = MailStringUtils.stringify(self._msg.get("Subject"))
-        return MailStringUtils.decode_header(v) if v else ""
+        v: str | None = AnyText.to_str(self._msg.get("Subject"))
+        return EncodedHeader.decode(v) if v else ""
 
     def from_addr(self) -> str:
-        v: str | None = MailStringUtils.stringify(self._msg.get("From"))
-        return MailStringUtils.decode_header(v) if v else ""
+        v: str | None = AnyText.to_str(self._msg.get("From"))
+        return EncodedHeader.decode(v) if v else ""
 
     def to_addr(self) -> str:
-        v: str | None = MailStringUtils.stringify(self._msg.get("To"))
-        return MailStringUtils.decode_header(v) if v else ""
+        v: str | None = AnyText.to_str(self._msg.get("To"))
+        return EncodedHeader.decode(v) if v else ""
 
 
 class _MailBody:

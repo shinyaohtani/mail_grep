@@ -131,29 +131,3 @@ class RawHeaderText:
                 break
             lines.append(line)
         return "\n".join(lines)
-
-
-class MailStringUtils:
-    """
-    互換APIファサード。
-    既存コードと同じメソッド名・同じシグネチャ・同じ振る舞いを維持する。
-    """
-
-    @staticmethod
-    def sanitize_csv_field(value: Any) -> str:
-        return CsvFieldText.sanitize(value)
-
-    @staticmethod
-    def stringify(v: str | bytes | None) -> str:
-        return AnyText.to_str(v)
-
-    @staticmethod
-    def decode_header(value: str | None) -> str:
-        return EncodedHeader.decode(value)
-
-    @staticmethod
-    def remove_crlf(value: str) -> str:
-        return RawHeaderText.remove_crlf(value)
-
-    # 以降は“旧private相当の内部機能”は RawHeaderText / EncodedHeader に集約。
-    # もし既存コードがこれらの private 名を直接参照していない限り互換性は維持されます。

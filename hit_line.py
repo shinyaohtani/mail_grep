@@ -1,5 +1,5 @@
 from mail_profile import MailProfile
-from mail_string_utils import MailStringUtils
+from mail_string_utils import CsvFieldText
 
 
 class HitLine:
@@ -30,4 +30,4 @@ class HitLine:
             self.parttype,
             self.line,
         ]
-        return [MailStringUtils.sanitize_csv_field(v) for v in ret]
+        return [CsvFieldText.sanitize(v) for v in ret]
