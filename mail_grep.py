@@ -37,17 +37,47 @@ class MailFolder:
 
 
 class MailMessage:
-    def get_message_id(self, msg: Message) -> str:
+    def __init__(self, mail_path: Path):
+        raw_bytes: bytes = self._read_emlx(mail_path)
+        self._msg: Message = self.parse_message(raw_bytes)
+
+    @staticmethod
+    def _read_emlx(path: Path) -> bytes:
+        raw = path.read_bytes()
+        return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
+
+    @staticmethod
+    def parse_message(raw_bytes: bytes) -> Message:
+        """
+        .emlx の長さ行をスキップしたあと、
+        ヘッダー＋本文をそのまま BytesParser に渡す
+        """
+        # 1) 長さ行があればスキップ
+        data = raw_bytes
+        if data[:1].isdigit():
+            nl = data.find(b"\n")
+            if nl != -1:
+                data = data[nl + 1 :]
+
+        # 2) バイト列を丸ごとパース（ヘッダーも本文もそのまま）
+        parser = BytesParser(policy=policy.default)
         try:
-            v = msg.get("Message-ID")
+            return parser.parsebytes(data)
+        except Exception:
+            # 万一エラーが起きたらフォールバック
+            return email.message_from_bytes(data, policy=policy.default)
+
+    def id(self) -> str:
+        try:
+            v = self._msg.get("Message-ID")
             v = self._normalize_header_value(v)
             return self._decode_header(v) if v else ""
         except Exception:
             return ""
 
-    def get_date(self, msg: Message) -> str:
+    def date(self) -> str:
         try:
-            v = msg.get("Date")
+            v = self._msg.get("Date")
             v = self._normalize_header_value(v)
             if not v:
                 return ""
@@ -55,17 +85,17 @@ class MailMessage:
             return dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             try:
-                v = msg.get("Date")
+                v = self._msg.get("Date")
                 v = self._normalize_header_value(v)
                 return self._decode_header(v or "")
             except Exception:
                 return ""
 
-    def extract_header_lines(self, msg: Message) -> list[str]:
+    def header_lines(self) -> list[str]:
         result = []
         for k in ("Subject", "From", "To", "Date"):
             try:
-                v = msg.get(k)
+                v = self._msg.get(k)
                 v = self._normalize_header_value(v)
                 if v is None:
                     continue
@@ -77,9 +107,9 @@ class MailMessage:
                 result.append(f"{k}: [INVALID HEADER]")
         return result
 
-    def extract_body_lines(self, msg: Message) -> list[tuple[str, str]]:
+    def body_lines(self) -> list[tuple[str, str]]:
         result = []
-        for part in self._iter_text_parts(msg):
+        for part in self._iter_text_parts(self._msg):
             payload = part.get_payload(decode=True)
             if not payload:
                 continue
@@ -122,30 +152,10 @@ class MailMessage:
 
         return result
 
-    def parse_message(self, raw_bytes: bytes) -> Message:
-        """
-        .emlx の長さ行をスキップしたあと、
-        ヘッダー＋本文をそのまま BytesParser に渡す
-        """
-        # 1) 長さ行があればスキップ
-        data = raw_bytes
-        if data[:1].isdigit():
-            nl = data.find(b"\n")
-            if nl != -1:
-                data = data[nl + 1 :]
-
-        # 2) バイト列を丸ごとパース（ヘッダーも本文もそのまま）
-        parser = BytesParser(policy=policy.default)
-        try:
-            return parser.parsebytes(data)
-        except Exception:
-            # 万一エラーが起きたらフォールバック
-            return email.message_from_bytes(data, policy=policy.default)
-
-    def get_date_dt(self, msg: Message) -> datetime | None:
+    def date_dt(self) -> datetime | None:
         """並べ替え用に Date を datetime で返す（失敗時は None）"""
         try:
-            v = msg.get("Date")
+            v = self._msg.get("Date")
             v = self._normalize_header_value(v)
             if not v:
                 return None
@@ -154,7 +164,7 @@ class MailMessage:
             return None
 
     @staticmethod
-    def build_mail_link(message_id: str) -> str:
+    def link(message_id: str) -> str:
         """
         Mail.app で開けるリンクを生成。
         形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
@@ -236,7 +246,7 @@ class MailMessage:
     def _decode_bytes(self, raw: bytes) -> str:
         return raw.decode("utf-8", errors="ignore")
 
-    def _extract_headers_section(self, raw_str: str) -> str:
+    def _headers_section(self, raw_str: str) -> str:
         lines = []
         for line in raw_str.splitlines():
             if line.strip() == "":
@@ -297,12 +307,12 @@ class SearchPattern:
     def match_mail(self, msg: Message, decoder: MailMessage) -> list[tuple]:
         matches: list[tuple[str, str]] = []
         # 1) ヘッダー行はこれまでどおり検索
-        for line in decoder.extract_header_lines(msg):
+        for line in decoder.header_lines(msg):
             if self._pattern.search(line):
                 matches.append(("header", line))
 
         # 2) 本文行は text/plain と text/html_textonly のみ対象
-        for line, parttype in decoder.extract_body_lines(msg):
+        for line, parttype in decoder.body_lines(msg):
             if parttype not in ("text/plain", "text/html_textonly"):
                 continue
             if self._pattern.search(line):
@@ -334,12 +344,10 @@ class MailCsvExporter:
     def __init__(
         self,
         mail_storage: MailFolder,
-        decoder: MailMessage,
         pattern: SearchPattern,
         output_path: Path,
     ):
         self._finder = mail_storage
-        self._decoder = decoder
         self._matcher = pattern
         self._output_path = output_path
 
@@ -349,14 +357,12 @@ class MailCsvExporter:
         try:
             for path in self._finder.mail_paths():
                 try:
-                    raw = self._read_emlx(path)
-                    msg = self._decoder.parse_message(raw)
+                    message = MailMessage(path)
+                    msg = message._msg
 
-                    message_id = self._decoder.get_message_id(msg)
-                    date_str = self._decoder.get_date(
-                        msg
-                    )  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
-                    date_dt = self._decoder.get_date_dt(msg)  # 並べ替え用
+                    message_id = message.id()
+                    date_str = message.date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
+                    date_dt = message.date_dt()  # 並べ替え用
                     subj = self._decoder._decode_header(
                         self._decoder._normalize_header_value(msg.get("Subject"))
                     )
@@ -366,7 +372,7 @@ class MailCsvExporter:
                     to_ = self._decoder._decode_header(
                         self._decoder._normalize_header_value(msg.get("To"))
                     )
-                    link = self._decoder.build_mail_link(message_id)
+                    link = self._decoder.link(message_id)
 
                     hit_count = 0
                     for parttype, line in self._matcher.match_mail(msg, self._decoder):
@@ -418,10 +424,6 @@ class MailCsvExporter:
             logging.info(
                 f"[MailGrep] {mail_count}件を {self._output_path} に保存しました。"
             )
-
-    def _read_emlx(self, path: Path) -> bytes:
-        raw = path.read_bytes()
-        return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
 
     def _sanitize_csv_field(self, value) -> str:
         if value is None:
@@ -631,7 +633,6 @@ def main():
     flags = re.IGNORECASE if args.ignore_case else 0
 
     finder = MailFolder(args.source)
-    decoder = MailMessage()
     pattern = SearchPattern(args.pattern, flags)
     output_path: Path = Path()
     if args.output:
@@ -642,7 +643,7 @@ def main():
         out_dir.mkdir(parents=True, exist_ok=True)
         output_path = out_dir / f"{unique_name}.csv"
 
-    exporter = MailCsvExporter(finder, decoder, pattern, output_path)
+    exporter = MailCsvExporter(finder, pattern, output_path)
     exporter.process_all()
 
 
