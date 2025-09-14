@@ -27,16 +27,18 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from smart_logging import SmartLogging
 
+from dataclasses import dataclass
 
-class MailIdentifiers:
-    def __init__(self, message: "MailMessage") -> None:
-        self.message_id: str = message._id()
-        self.date_str: str = message._date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
-        self.date_dt: datetime | None = message.date_dt()  # 並べ替え用
-        self.link: str = message.link()
-        self.subj: str = message.subject_str()
-        self.from_addr: str = message.from_str()
-        self.to_addr: str = message.to_str()
+
+@dataclass(frozen=True)
+class MailProfile:
+    message_id: str
+    date_str: str
+    date_dt: datetime | None
+    link: str
+    subj: str
+    from_addr: str
+    to_addr: str
 
     @property
     def excel_link(self) -> str:
@@ -46,7 +48,7 @@ class MailIdentifiers:
 class HitLine:
     def __init__(
         self,
-        mail_keys: MailIdentifiers,
+        mail_keys: MailProfile,
         mail_id: int,
         hit_count: int,
         parttype: str,
@@ -304,12 +306,13 @@ class MailMessage:
     def __init__(self, mail_path: Path):
         self._mail_path = mail_path
         self._msg: Message = self._load()
-        self._key_strings = MailIdentifiers(self)
+        self._profile = self.profile()
 
-    def key_strings(self) -> MailIdentifiers:
-        return self._key_strings
+    def key_profile(self) -> MailProfile:
+        return self._profile
 
-    def _id(self) -> str:
+    @property
+    def _id_str(self) -> str:
         try:
             v = self._msg.get("Message-ID")
             v = MailStringUtils.stringify(v)
@@ -317,7 +320,8 @@ class MailMessage:
         except Exception:
             return ""
 
-    def _date(self) -> str:
+    @property
+    def _date_str(self) -> str:
         try:
             v = self._msg.get("Date")
             v = MailStringUtils.stringify(v)
@@ -332,6 +336,65 @@ class MailMessage:
                 return MailStringUtils.decode_header(v or "")
             except Exception:
                 return ""
+
+    @property
+    def _date_dt(self) -> datetime | None:
+        """並べ替え用に Date を datetime で返す（失敗時は None）"""
+        try:
+            v = self._msg.get("Date")
+            v = MailStringUtils.stringify(v)
+            if not v:
+                return None
+            return parsedate_to_datetime(v)
+        except Exception:
+            return None
+
+    @property
+    def _link_str(self) -> str:
+        """
+        Mail.app で開けるリンクを生成。
+        形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
+        """
+        message_id = self._id_str()
+        if not message_id:
+            return ""
+        mid = message_id.strip()
+        if not mid.startswith("<"):
+            mid = f"<{mid}>"
+        # 角括弧や@を含めて完全にエンコード（Excel でもクリック可能）
+        return f"message:{quote(mid, safe='')}"
+
+    @property
+    def _subject_str(self) -> str:
+        subj = MailStringUtils.decode_header(
+            MailStringUtils.stringify(self._msg.get("Subject"))
+        )
+        return subj
+
+    @property
+    def _from_addr(self) -> str:
+        from_ = MailStringUtils.decode_header(
+            MailStringUtils.stringify(self._msg.get("From"))
+        )
+        return from_
+
+    @property
+    def _to_addr(self) -> str:
+        to_ = MailStringUtils.decode_header(
+            MailStringUtils.stringify(self._msg.get("To"))
+        )
+        return to_
+
+    def profile(self) -> MailProfile:
+        return MailProfile(
+            message_id=self._id_str,
+            date_str=self._date_str,
+            date_dt=self._date_dt,
+            link=self._link_str,
+            subj=self._subject_str,
+            from_addr=self._from_addr,
+            to_addr=self._to_addr,
+        )
 
     def header_lines(self) -> list[str]:
         result = []
@@ -393,49 +456,6 @@ class MailMessage:
                         result.append((line, ctype))
 
         return result
-
-    def date_dt(self) -> datetime | None:
-        """並べ替え用に Date を datetime で返す（失敗時は None）"""
-        try:
-            v = self._msg.get("Date")
-            v = MailStringUtils.stringify(v)
-            if not v:
-                return None
-            return parsedate_to_datetime(v)
-        except Exception:
-            return None
-
-    def link(self) -> str:
-        """
-        Mail.app で開けるリンクを生成。
-        形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
-        """
-        message_id = self._id()
-        if not message_id:
-            return ""
-        mid = message_id.strip()
-        if not mid.startswith("<"):
-            mid = f"<{mid}>"
-        # 角括弧や@を含めて完全にエンコード（Excel でもクリック可能）
-        return f"message:{quote(mid, safe='')}"
-
-    def subject_str(self) -> str:
-        subj = MailStringUtils.decode_header(
-            MailStringUtils.stringify(self._msg.get("Subject"))
-        )
-        return subj
-
-    def from_str(self) -> str:
-        from_ = MailStringUtils.decode_header(
-            MailStringUtils.stringify(self._msg.get("From"))
-        )
-        return from_
-
-    def to_str(self) -> str:
-        to_ = MailStringUtils.decode_header(
-            MailStringUtils.stringify(self._msg.get("To"))
-        )
-        return to_
 
     def _iter_text_parts(self) -> Generator[Message, None, None]:
         if hasattr(self._msg, "is_multipart") and self._msg.is_multipart():
@@ -499,7 +519,7 @@ class SearchPattern:
             pattern = re.sub(k, lambda m, v=v: v, pattern)
         return pattern
 
-    def match_mail(self, message: MailMessage) -> list[tuple]:
+    def match_mail(self, message: MailMessage) -> list[tuple[str, str]]:
         matches: list[tuple[str, str]] = []
         # 1) ヘッダー行はこれまでどおり検索
         for line in message.header_lines():
@@ -556,7 +576,7 @@ class MailGrepApp:
             for mail_id, path in enumerate(self._storage.mail_paths(), 1):
                 try:
                     message: MailMessage = MailMessage(path)
-                    mail_keys: MailIdentifiers = message.key_strings()
+                    mail_keys: MailProfile = message.key_profile()
                     for hit_count, (parttype, line) in enumerate(
                         self._pattern.match_mail(message), 1
                     ):
