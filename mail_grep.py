@@ -36,7 +36,7 @@ class MailFolder:
         return list(self._root_dir.rglob("*.emlx"))
 
 
-class MailTextDecoder:
+class MailMessage:
     def get_message_id(self, msg) -> str:
         try:
             v = msg.get("Message-ID")
@@ -289,7 +289,7 @@ class SearchPattern:
             pattern = re.sub(k, lambda m, v=v: v, pattern)
         return pattern
 
-    def match_mail(self, msg: Message, decoder: MailTextDecoder) -> list[tuple]:
+    def match_mail(self, msg: Message, decoder: MailMessage) -> list[tuple]:
         matches: list[tuple[str, str]] = []
         # 1) ヘッダー行はこれまでどおり検索
         for line in decoder.extract_header_lines(msg):
@@ -328,14 +328,14 @@ class SearchPattern:
 class MailCsvExporter:
     def __init__(
         self,
-        finder: MailFolder,
-        decoder: MailTextDecoder,
-        matcher: SearchPattern,
+        mail_storage: MailFolder,
+        decoder: MailMessage,
+        pattern: SearchPattern,
         output_path: Path,
     ):
-        self._finder = finder
+        self._finder = mail_storage
         self._decoder = decoder
-        self._matcher = matcher
+        self._matcher = pattern
         self._output_path = output_path
 
     def process_all(self):
@@ -626,7 +626,7 @@ def main():
     flags = re.IGNORECASE if args.ignore_case else 0
 
     finder = MailFolder(args.source)
-    decoder = MailTextDecoder()
+    decoder = MailMessage()
     pattern = SearchPattern(args.pattern, flags)
     output_path: Path = Path()
     if args.output:
