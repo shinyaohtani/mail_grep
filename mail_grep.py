@@ -355,7 +355,7 @@ class MailMessage:
         Mail.app で開けるリンクを生成。
         形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
         """
-        message_id = self._id_str()
+        message_id = self._id_str
         if not message_id:
             return ""
         mid = message_id.strip()
