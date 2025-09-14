@@ -43,7 +43,7 @@ class MailIdentifiers:
         return f'=HYPERLINK("{self.link}","メール")' if self.link else ""
 
 
-class SearchHitLine:
+class HitLine:
     def __init__(
         self,
         mail_keys: MailIdentifiers,
@@ -90,12 +90,12 @@ class HitReport:
 
     def __init__(self) -> None:
         super().__init__()
-        self.hit_lines: list[SearchHitLine] = []
+        self.hit_lines: list[HitLine] = []
 
     def mail_count(self) -> int:
         return sum(1 for row in self.hit_lines if row.hit_count == 1)
 
-    def append_hit_line(self, line: SearchHitLine) -> None:
+    def append_hit_line(self, line: HitLine) -> None:
         self.hit_lines.append(line)
 
     def sort(self) -> None:
@@ -566,7 +566,7 @@ class MailGrepApp:
                             )
                         else:
                             print(f"✓ [{parttype}] {self.line_preview(line)}")
-                        hit = SearchHitLine(
+                        hit = HitLine(
                             mail_keys,  # use date_dt as a sort key (datetime or None)
                             mail_id,  # mail_id
                             hit_count,  # hit_id
@@ -599,36 +599,48 @@ class MailGrepApp:
         return preview
 
 
-def create_parser():
-    parser = argparse.ArgumentParser(
-        description="egrep風にemlxメールをgrepし、CSVに出力するツール"
-    )
-    parser.add_argument(
-        "pattern", metavar="PATTERN", help="検索したい正規表現（egrep互換）"
-    )
-    parser.add_argument(
-        "-i", "--ignore-case", action="store_true", help="大文字・小文字を無視する"
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        default=None,
-        help="出力CSVファイル名（未指定時は自動生成: results/<pattern先頭16>_タイムスタンプ.csv）",
-    )
-    parser.add_argument(
-        "-s",
-        "--source",
-        type=Path,
-        default=Path.home() / "Library" / "Mail" / "V10",
-        help="emlxファイルの格納ディレクトリ",
-    )
-    return parser
+class AppArguments:
+    def __init__(self):
+        self.parser: argparse.ArgumentParser = self._create_parser()
+        self.args: argparse.Namespace | None = None
+
+    def parse(self) -> argparse.Namespace:
+        self.args = self.parser.parse_args()
+        if self.args is None:
+            raise ValueError("Failed to parse arguments")
+        return self.args
+
+    @staticmethod
+    def _create_parser() -> argparse.ArgumentParser:
+        parser = argparse.ArgumentParser(
+            description="egrep風にemlxメールをgrepし、CSVに出力するツール"
+        )
+        parser.add_argument(
+            "pattern", metavar="PATTERN", help="検索したい正規表現（egrep互換）"
+        )
+        parser.add_argument(
+            "-i", "--ignore-case", action="store_true", help="大文字・小文字を無視する"
+        )
+        parser.add_argument(
+            "-o",
+            "--output",
+            type=Path,
+            default=None,
+            help="出力CSVファイル名（未指定時は自動生成: results/<pattern先頭16>_タイムスタンプ.csv）",
+        )
+        parser.add_argument(
+            "-s",
+            "--source",
+            type=Path,
+            default=Path.home() / "Library" / "Mail" / "V10",
+            help="emlxファイルの格納ディレクトリ",
+        )
+        return parser
 
 
 def main():
-    parser = create_parser()
-    args = parser.parse_args()
+    app_args = AppArguments()
+    args = app_args.parse()
 
     storage = MailFolder(args.source)
 
