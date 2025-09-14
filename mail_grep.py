@@ -25,7 +25,7 @@ class MailGrepApp:
         self._storage = mail_storage
         self._pattern = pattern
         if output_path is None:
-            unique_name = pattern.unique_name()
+            unique_name = pattern.unique_name
             out_dir = Path("results")
             out_dir.mkdir(parents=True, exist_ok=True)
             output_path = out_dir / f"{unique_name}.csv"
@@ -39,7 +39,7 @@ class MailGrepApp:
                     message: MailMessage = MailMessage(path)
                     mail_keys: MailProfile = message.key_profile()
                     for hit_count, (parttype, line) in enumerate(
-                        self._pattern.match_mail(message), 1
+                        message.extract(self._pattern), 1
                     ):
                         if hit_count == 1:
                             print(

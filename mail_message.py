@@ -12,6 +12,7 @@ import logging
 
 from mail_profile import MailProfile
 from mail_string_utils import MailStringUtils
+from search_pattern import SearchPattern
 
 
 class MailMessage:
@@ -22,6 +23,22 @@ class MailMessage:
 
     def key_profile(self) -> MailProfile:
         return self._profile
+    
+    def extract(self, pattern: SearchPattern) -> list[tuple[str, str]]:
+        matches: list[tuple[str, str]] = []
+        # 1) ヘッダー行はこれまでどおり検索
+        for line in self.header_lines():
+            if pattern.check_line(line):
+                matches.append(("header", line))
+
+        # 2) 本文行は text/plain と text/html_textonly のみ対象
+        for line, parttype in self.body_lines():
+            if parttype not in ("text/plain", "text/html_textonly"):
+                continue
+            if pattern.check_line(line):
+                matches.append((parttype, line))
+
+        return matches
 
     @property
     def _id_str(self) -> str:
