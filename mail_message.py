@@ -17,7 +17,7 @@ from mail_string_utils import MailStringUtils
 from search_pattern import SearchPattern
 
 
-class MailBlob:
+class _MailBlob:
     """'.emlx' のバイト実体を保持するモノ。"""
 
     def __init__(self, mail_abspath: Path):
@@ -40,7 +40,7 @@ class MailBlob:
             return email.message_from_bytes(data, policy=policy.default)
 
 
-class MailHeaders:
+class _MailHeaders:
     """メールのヘッダという“モノ”。"""
 
     def __init__(self, msg: Message):
@@ -111,7 +111,7 @@ class MailHeaders:
         return MailStringUtils.decode_header(v) if v else ""
 
 
-class MailBody:
+class _MailBody:
     """メールの本文という“モノ”。"""
 
     def __init__(self, msg: Message):
@@ -169,10 +169,10 @@ class MailMessage:
 
     def __init__(self, mail_abspath: Path):
         self._mail_abspath: Path = mail_abspath
-        blob: MailBlob = MailBlob(mail_abspath)
+        blob: _MailBlob = _MailBlob(mail_abspath)
         self._msg: Message = blob.message()
-        self._headers: MailHeaders = MailHeaders(self._msg)
-        self._body: MailBody = MailBody(self._msg)
+        self._headers: _MailHeaders = _MailHeaders(self._msg)
+        self._body: _MailBody = _MailBody(self._msg)
         self._profile: MailProfile = self.profile()
 
     def key_profile(self) -> MailProfile:
@@ -180,20 +180,20 @@ class MailMessage:
 
     def extract(self, pattern: SearchPattern) -> list[tuple[str, str]]:
         matches: list[tuple[str, str]] = []
-        for line in self.header_lines():
+        for line in self._header_lines():
             if pattern.check_line(line):
                 matches.append(("header", line))
-        for line, parttype in self.body_lines():
+        for line, parttype in self._body_lines():
             if parttype not in ("text/plain", "text/html_textonly"):
                 continue
             if pattern.check_line(line):
                 matches.append((parttype, line))
         return matches
 
-    def header_lines(self) -> list[str]:
+    def _header_lines(self) -> list[str]:
         return self._headers.lines()
 
-    def body_lines(self) -> list[tuple[str, str]]:
+    def _body_lines(self) -> list[tuple[str, str]]:
         return self._body.lines()
 
     def profile(self) -> MailProfile:
