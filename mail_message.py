@@ -173,7 +173,7 @@ class MailMessage:
         self._msg: Message = blob.message()
         self._headers: _MailHeaders = _MailHeaders(self._msg)
         self._body: _MailBody = _MailBody(self._msg)
-        self._profile: MailProfile = self.profile()
+        self._profile: MailProfile = self._create_profile()
 
     def key_profile(self) -> MailProfile:
         return self._profile
@@ -196,7 +196,7 @@ class MailMessage:
     def _body_lines(self) -> list[tuple[str, str]]:
         return self._body.lines()
 
-    def profile(self) -> MailProfile:
+    def _create_profile(self) -> MailProfile:
         return MailProfile(
             message_id=self._headers.id_str(),
             date_str=self._headers.date_str(),
