@@ -6,7 +6,7 @@ from email.message import Message
 from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import cast
+from typing import cast, Any
 from typing import Generator
 from urllib.parse import quote
 import argparse
@@ -36,22 +36,19 @@ class MailFolder:
         return list(self._root_dir.rglob("*.emlx"))
 
 
-class MailMessage:
-    def __init__(self, mail_path: Path):
-        raw_bytes: bytes = self._read_emlx(mail_path)
-        self._msg: Message = self.parse_message(raw_bytes)
-
+class MailStringUtils:
     @staticmethod
     def _read_emlx(path: Path) -> bytes:
         raw = path.read_bytes()
         return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
 
     @staticmethod
-    def parse_message(raw_bytes: bytes) -> Message:
+    def parse_message(mail_path: Path) -> Message:
         """
         .emlx の長さ行をスキップしたあと、
         ヘッダー＋本文をそのまま BytesParser に渡す
         """
+        raw_bytes = MailStringUtils._read_emlx(mail_path)
         # 1) 長さ行があればスキップ
         data = raw_bytes
         if data[:1].isdigit():
@@ -67,18 +64,134 @@ class MailMessage:
             # 万一エラーが起きたらフォールバック
             return email.message_from_bytes(data, policy=policy.default)
 
-    def id(self) -> str:
+    @staticmethod
+    def stringify(v: str | bytes | None) -> str:
+        if v is None:
+            return ""
+        if hasattr(v, "addresses"):
+            try:
+                return str(v)
+            except Exception:
+                return ""
+        if isinstance(v, bytes):
+            try:
+                return v.decode("utf-8", errors="replace")
+            except Exception:
+                return ""
+        if not isinstance(v, str):
+            return str(v)
+        return v
+
+    @staticmethod
+    def decode_header(value: str | None) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            value = MailStringUtils.remove_crlf(value)
+        try:
+            parts = decode_header(value)
+        except Exception:
+            return ""
+        out = []
+        for text, enc in parts:
+            if isinstance(text, bytes):
+                status: str = "noErr"
+                if enc:
+                    try:
+                        return_text = text.decode(enc, errors="strict")
+                        out.append(return_text)
+                        continue
+                    except Exception as e:
+                        status = f"decode_header: {enc=} decode failed ({e}), trying utf-8 ..."
+                out.append(MailStringUtils._decode_header_fallback(text, status))
+            else:
+                out.append(str(text))
+        return "".join(out)
+
+    @staticmethod
+    def _decode_header_fallback(text: bytes, status: str) -> str:
+        try:
+            return text.decode("utf-8", errors="strict")
+        except Exception:
+            pass
+        try:
+            return text.decode("latin1", errors="replace")
+        except Exception:
+            pass
+        logging.warning(f"[MailGrep] {status}")
+        logging.warning(
+            f"[MailGrep] decode_header: could not decode {repr(text[:40])}, outputting raw bytes."
+        )
+        return repr(text)
+
+    @staticmethod
+    def remove_crlf(value: str) -> str:
+        if not value:
+            return ""
+        return value.replace("\r", "").replace("\n", " ")
+
+    @staticmethod
+    def _sanitize_header_section(header_str: str) -> str:
+        sanitized = []
+        prev_colon = False
+        for line in header_str.splitlines():
+            if ":" in line:
+                key, val = line.split(":", 1)
+                val = val.replace("\r", " ").replace("\n", " ")
+                sanitized.append(f"{key}:{val}")
+                prev_colon = True
+            else:
+                if prev_colon:
+                    line = line.replace("\r", " ").replace("\n", " ")
+                sanitized.append(line)
+                prev_colon = False
+        return "\n".join(sanitized)
+
+    @staticmethod
+    def _decode_bytes(raw: bytes) -> str:
+        return raw.decode("utf-8", errors="ignore")
+
+    @staticmethod
+    def _headers_section(raw_str: str) -> str:
+        lines = []
+        for line in raw_str.splitlines():
+            if line.strip() == "":
+                break
+            lines.append(line)
+        return "\n".join(lines)
+
+
+class MailKeyStrings:
+    def __init__(self, message: "MailMessage") -> None:
+        self.message_id = message._id()
+        self.date_str = message._date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
+        self.date_dt = message.date_dt()  # 並べ替え用
+        self.link = message.link()
+        self.subj = message.subject_str()
+        self.from_addr = message.from_str()
+        self.to_addr = message.to_str()
+
+
+class MailMessage:
+    def __init__(self, mail_path: Path):
+        self._msg: Message = MailStringUtils.parse_message(mail_path)
+        self._key_strings = MailKeyStrings(self)
+
+    def key_strings(self) -> MailKeyStrings:
+        return self._key_strings
+
+    def _id(self) -> str:
         try:
             v = self._msg.get("Message-ID")
-            v = self.stringify(v)
-            return self.decode_header(v) if v else ""
+            v = MailStringUtils.stringify(v)
+            return MailStringUtils.decode_header(v) if v else ""
         except Exception:
             return ""
 
-    def date(self) -> str:
+    def _date(self) -> str:
         try:
             v = self._msg.get("Date")
-            v = self.stringify(v)
+            v = MailStringUtils.stringify(v)
             if not v:
                 return ""
             dt = parsedate_to_datetime(v)
@@ -86,8 +199,8 @@ class MailMessage:
         except Exception:
             try:
                 v = self._msg.get("Date")
-                v = self.stringify(v)
-                return self.decode_header(v or "")
+                v = MailStringUtils.stringify(v)
+                return MailStringUtils.decode_header(v or "")
             except Exception:
                 return ""
 
@@ -96,10 +209,10 @@ class MailMessage:
         for k in ("Subject", "From", "To", "Date"):
             try:
                 v = self._msg.get(k)
-                v = self.stringify(v)
+                v = MailStringUtils.stringify(v)
                 if v is None:
                     continue
-                decoded = self.decode_header(v)
+                decoded = MailStringUtils.decode_header(v)
                 decoded = decoded.replace("\r", "").replace("\n", " ")
                 result.append(f"{k}: {decoded}")
             except Exception as e:
@@ -109,7 +222,7 @@ class MailMessage:
 
     def body_lines(self) -> list[tuple[str, str]]:
         result = []
-        for part in self._iter_text_parts(self._msg):
+        for part in self._iter_text_parts():
             payload = part.get_payload(decode=True)
             if not payload:
                 continue
@@ -156,7 +269,7 @@ class MailMessage:
         """並べ替え用に Date を datetime で返す（失敗時は None）"""
         try:
             v = self._msg.get("Date")
-            v = self.stringify(v)
+            v = MailStringUtils.stringify(v)
             if not v:
                 return None
             return parsedate_to_datetime(v)
@@ -168,7 +281,7 @@ class MailMessage:
         Mail.app で開けるリンクを生成。
         形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
         """
-        message_id = self.id()
+        message_id = self._id()
         if not message_id:
             return ""
         mid = message_id.strip()
@@ -178,131 +291,58 @@ class MailMessage:
         return f"message:{quote(mid, safe='')}"
 
     def subject_str(self) -> str:
-        subj = MailMessage.decode_header(
-            MailMessage.stringify(self._msg.get("Subject"))
+        subj = MailStringUtils.decode_header(
+            MailStringUtils.stringify(self._msg.get("Subject"))
         )
         return subj
 
     def from_str(self) -> str:
-        from_ = MailMessage.decode_header(MailMessage.stringify(self._msg.get("From")))
+        from_ = MailStringUtils.decode_header(
+            MailStringUtils.stringify(self._msg.get("From"))
+        )
         return from_
 
     def to_str(self) -> str:
-        to_ = MailMessage.decode_header(MailMessage.stringify(self._msg.get("To")))
+        to_ = MailStringUtils.decode_header(
+            MailStringUtils.stringify(self._msg.get("To"))
+        )
         return to_
 
-    def _sanitize_header_section(self, header_str: str) -> str:
-        sanitized = []
-        prev_colon = False
-        for line in header_str.splitlines():
-            if ":" in line:
-                key, val = line.split(":", 1)
-                val = val.replace("\r", " ").replace("\n", " ")
-                sanitized.append(f"{key}:{val}")
-                prev_colon = True
-            else:
-                if prev_colon:
-                    line = line.replace("\r", " ").replace("\n", " ")
-                sanitized.append(line)
-                prev_colon = False
-        return "\n".join(sanitized)
-
-    @staticmethod
-    def stringify(v: str | bytes | None) -> str:
-        if v is None:
-            return ""
-        if hasattr(v, "addresses"):
-            try:
-                return str(v)
-            except Exception:
-                return ""
-        if isinstance(v, bytes):
-            try:
-                return v.decode("utf-8", errors="replace")
-            except Exception:
-                return ""
-        if not isinstance(v, str):
-            return str(v)
-        return v
-
-    @staticmethod
-    def decode_header(value: str | None) -> str:
-        if value is None:
-            return ""
-        if isinstance(value, str):
-            value = MailMessage.remove_crlf(value)
-        try:
-            parts = decode_header(value)
-        except Exception:
-            return ""
-        out = []
-        for text, enc in parts:
-            if isinstance(text, bytes):
-                status: str = "noErr"
-                if enc:
-                    try:
-                        return_text = text.decode(enc, errors="strict")
-                        out.append(return_text)
-                        continue
-                    except Exception as e:
-                        status = f"decode_header: {enc=} decode failed ({e}), trying utf-8 ..."
-                out.append(MailMessage._decode_header_fallback(text, status))
-            else:
-                out.append(str(text))
-        return "".join(out)
-
-    def _iter_text_parts(self, msg: Message) -> Generator[Message, None, None]:
-        if hasattr(msg, "is_multipart") and msg.is_multipart():
-            for p in msg.walk():
+    def _iter_text_parts(self) -> Generator[Message, None, None]:
+        if hasattr(self._msg, "is_multipart") and self._msg.is_multipart():
+            for p in self._msg.walk():
                 if p.get_content_type().startswith("text/"):
                     yield p
         else:
-            yield msg
+            yield self._msg
 
-    def _decode_bytes(self, raw: bytes) -> str:
-        return raw.decode("utf-8", errors="ignore")
 
-    def _headers_section(self, raw_str: str) -> str:
-        lines = []
-        for line in raw_str.splitlines():
-            if line.strip() == "":
-                break
-            lines.append(line)
-        return "\n".join(lines)
-
-    @staticmethod
-    def _decode_header_fallback(text: bytes, status: str) -> str:
-        try:
-            return text.decode("utf-8", errors="strict")
-        except Exception:
-            pass
-        try:
-            return text.decode("latin1", errors="replace")
-        except Exception:
-            pass
-        logging.warning(f"[MailGrep] {status}")
-        logging.warning(
-            f"[MailGrep] decode_header: could not decode {repr(text[:40])}, outputting raw bytes."
-        )
-        return repr(text)
-
-    @staticmethod
-    def remove_crlf(value: str) -> str:
-        if not value:
-            return ""
-        return value.replace("\r", "").replace("\n", " ")
+class SearchHitLine:
+    def __init__(
+        self,
+        mail_keys: MailKeyStrings,
+        mail_id: int,
+        hit_count: int,
+        parttype: str,
+        line: str,
+    ):
+        self.mail_keys = mail_keys
+        self.mail_id = mail_id
+        self.hit_count = hit_count
+        self.parttype = parttype
+        self.line = line.strip()
 
 
 # --- パターンマッチ ---
 class SearchPattern:
     def __init__(self, egrep_pattern: str, flags=0):
         self._egrep_pattern = egrep_pattern
-        python_pattern = self.egrep_to_python_regex(self._egrep_pattern)
+        python_pattern = self._egrep_to_python_regex(self._egrep_pattern)
         self._pattern = re.compile(python_pattern, flags | re.DOTALL)
 
     # --- egrep to Python正規表現（必要なら改良して下さい） ---
     @staticmethod
-    def egrep_to_python_regex(pattern: str) -> str:
+    def _egrep_to_python_regex(pattern: str) -> str:
         posix_map = {
             r"\[[:digit:]\]": r"\d",
             r"\[[:space:]\]": r"\s",
@@ -337,7 +377,7 @@ class SearchPattern:
 
         return matches
 
-    def uid(self) -> str:
+    def unique_name(self) -> str:
         """
         検索文字列からデフォルト保存先:
         <cleaned_head16>_<YYYY-MM-DD_HHMMSS>
@@ -357,61 +397,47 @@ class SearchPattern:
 
 
 # --- CSV出力 ---
-class MailCsvExporter:
+class MailGrepApp:
     def __init__(
         self,
         mail_storage: MailFolder,
         pattern: SearchPattern,
-        output_path: Path,
+        output_path: Path | None,
     ):
-        self._finder = mail_storage
-        self._matcher = pattern
+        self._storage = mail_storage
+        self._pattern = pattern
+        if output_path is None:
+            unique_name = pattern.unique_name()
+            out_dir = Path("results")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            output_path = out_dir / f"{unique_name}.csv"
         self._output_path = output_path
 
-    def process_all(self):
-        rows = []
-        mail_id = 1
+    def run(self):
+        rows: list[SearchHitLine] = []
         try:
-            for path in self._finder.mail_paths():
+            for mail_id, path in enumerate(self._storage.mail_paths(), 1):
                 try:
-                    message = MailMessage(path)
-
-                    message_id = message.id()
-                    date_str = message.date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
-                    date_dt = message.date_dt()  # 並べ替え用
-                    link = message.link()
-                    subj = message.subject_str()
-                    from_ = message.from_str()
-                    to_ = message.to_str()
-
-                    hit_count = 0
-                    for parttype, line in self._matcher.match_mail(message):
-                        hit_count += 1
-                        max_len = 50
-                        preview = line.strip()
-                        if len(preview) > max_len:
-                            preview = preview[:max_len] + "..."
+                    message: MailMessage = MailMessage(path)
+                    mail_keys: MailKeyStrings = message.key_strings()
+                    for hit_count, (parttype, line) in enumerate(
+                        self._pattern.match_mail(message), 1
+                    ):
                         if hit_count == 1:
-                            print(f"✓ [{parttype}] hit! ({date_str}) {preview}")
+                            print(
+                                f"✓ [{parttype}] hit! ({mail_keys.date_str}) {self.line_preview(line)}"
+                            )
                         else:
-                            print(f"✓ [{parttype}] {preview}")
-                        # 並べ替え用キーを先頭に持たせておく（書き出し時に除去）
+                            print(f"✓ [{parttype}] {self.line_preview(line)}")
                         rows.append(
-                            [
-                                date_dt,  # sort key (datetime or None)
+                            SearchHitLine(
+                                mail_keys,  # use date_dt as a sort key (datetime or None)
                                 mail_id,  # mail_id
                                 hit_count,  # hit_id
-                                message_id,  # message_id
-                                link,  # link (Mail.app)
-                                date_str,  # Date (表示用)
-                                from_,
-                                to_,
-                                subj,
                                 parttype,  # Matched Part
                                 line.strip(),  # Matched Line
-                            ]
+                            )
                         )
-                    mail_id += 1
                 except Exception as e:
                     logging.warning(f"[MailGrep] Skipped {path}: {e}")
         except KeyboardInterrupt:
@@ -419,14 +445,15 @@ class MailCsvExporter:
             logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
             # 1) Date 降順でソート（None は末尾）
+            # SearchHitLine.mail_keys.date_dtで逆順ソート
             def sort_key(row):
-                dt = row[0]
+                dt = row.mail_keys.date_dt
                 return (dt is None, -(dt.timestamp() if dt else 0))
 
             rows.sort(key=sort_key)
 
             # 2) メール件数を計算（hit_id == 1 の行のみカウント）
-            mail_count = sum(1 for row in rows if row[2] == 1)
+            mail_count = sum(1 for row in rows if row.hit_count == 1)
 
             # 拡張子が何であろうと2種類とも保存する
             self._write_xlsx(rows)
@@ -435,13 +462,21 @@ class MailCsvExporter:
                 f"[MailGrep] {mail_count}件を {self._output_path} に保存しました。"
             )
 
+    @staticmethod
+    def line_preview(line: str) -> str:
+        max_len = 50
+        preview = line.strip()
+        if len(preview) > max_len:
+            preview = preview[:max_len] + "..."
+        return preview
+
     def _sanitize_csv_field(self, value) -> str:
         if value is None:
             return ""
         s = str(value)
         return s.replace("\r", "").replace("\n", "⏎")
 
-    def _write_csv(self, rows):
+    def _write_csv(self, rows: list[SearchHitLine]) -> None:
         # 4) BOM 付き UTF-8 で保存（Excel 配慮）
         csv_path = self._output_path.with_suffix(".csv")
         with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
@@ -462,37 +497,27 @@ class MailCsvExporter:
                 ]
             )
             for row in rows:
-                # 先頭の sort key を捨て、指定順に並べ替えて書き出し
-                (
-                    _,
-                    mail_id,
-                    hit_id,
-                    message_id,
-                    link,
-                    date_str,
-                    from_,
-                    to_,
-                    subj,
-                    parttype,
-                    matched,
-                ) = row
-                excel_link = f'=HYPERLINK("{link}","メール")' if link else ""
+                excel_link = (
+                    f'=HYPERLINK("{row.mail_keys.link}","メール")'
+                    if row.mail_keys.link
+                    else ""
+                )
                 out = [
-                    mail_id,
-                    hit_id,
-                    message_id,
+                    row.mail_id,
+                    row.hit_count,
+                    row.mail_keys.message_id,
                     excel_link,
-                    date_str,
-                    from_,
-                    to_,
-                    subj,
-                    parttype,
-                    matched,
+                    row.mail_keys.date_str,
+                    row.mail_keys.from_addr,
+                    row.mail_keys.to_addr,
+                    row.mail_keys.subj,
+                    row.parttype,
+                    row.line,
                 ]
                 writer.writerow([self._sanitize_csv_field(v) for v in out])
         logging.info(f"[MailGrep] excel {csv_path}")
 
-    def _write_xlsx(self, rows: list[list]) -> None:
+    def _write_xlsx(self, rows: list[SearchHitLine]) -> None:
         """
         XLSXで保存（openpyxl が必要）。
         - リンク列はExcelのHYPERLINK関数を使う（CSVと同じ）
@@ -520,43 +545,22 @@ class MailCsvExporter:
         ws.auto_filter.ref = ws.dimensions
 
         for row in rows:
-            (
-                _,
-                mail_id,
-                hit_id,
-                message_id,
-                link,
-                date_str,
-                from_,
-                to_,
-                subj,
-                parttype,
-                matched,
-            ) = row
-
-            mail_id: int
-            hit_id: int
-            message_id: str
-            link: str
-            date_str: str
-            from_: str
-            to_: str
-            subj: str
-            parttype: str
-            matched: str
-
-            excel_link: str = f'=HYPERLINK("{link}","メール")' if link else ""
+            excel_link: str = (
+                f'=HYPERLINK("{row.mail_keys.link}","メール")'
+                if row.mail_keys.link
+                else ""
+            )
             values: list[str | int] = [
-                mail_id,
-                hit_id,
-                self._sanitize_csv_field(message_id),
+                row.mail_id,
+                row.hit_count,
+                self._sanitize_csv_field(row.mail_keys.message_id),
                 excel_link,
-                self._sanitize_csv_field(date_str),
-                self._sanitize_csv_field(from_),
-                self._sanitize_csv_field(to_),
-                self._sanitize_csv_field(subj),
-                self._sanitize_csv_field(parttype),
-                self._sanitize_csv_field(matched),
+                self._sanitize_csv_field(row.mail_keys.date_str),
+                self._sanitize_csv_field(row.mail_keys.from_addr),
+                self._sanitize_csv_field(row.mail_keys.to_addr),
+                self._sanitize_csv_field(row.mail_keys.subj),
+                self._sanitize_csv_field(row.parttype),
+                self._sanitize_csv_field(row.line),
             ]
             ws.append(values)
 
@@ -640,21 +644,14 @@ def create_parser():
 def main():
     parser = create_parser()
     args = parser.parse_args()
+
+    storage = MailFolder(args.source)
+
     flags = re.IGNORECASE if args.ignore_case else 0
-
-    finder = MailFolder(args.source)
     pattern = SearchPattern(args.pattern, flags)
-    output_path: Path = Path()
-    if args.output:
-        output_path = Path(args.output)
-    else:
-        unique_name = pattern.uid()
-        out_dir = Path("results")
-        out_dir.mkdir(parents=True, exist_ok=True)
-        output_path = out_dir / f"{unique_name}.csv"
 
-    exporter = MailCsvExporter(finder, pattern, output_path)
-    exporter.process_all()
+    app = MailGrepApp(storage, pattern, args.output)
+    app.run()
 
 
 if __name__ == "__main__":
