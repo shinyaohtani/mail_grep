@@ -36,27 +36,6 @@ class MailFolder:
         return list(self._root_dir.rglob("*.emlx"))
 
 
-def default_output_path_from_pattern(pat: str) -> Path:
-    """
-    検索文字列からデフォルト保存先:
-      results/<cleaned_head16>_<YYYY-MM-DD_HHMMSS>.csv
-    - 空白は "_"、正規表現の特殊文字は除去
-    - 先頭の非特殊文字のみから最大16文字
-    """
-    # NFKC正規化 → 空白を "_" に
-    s = unicodedata.normalize("NFKC", pat).replace(" ", "_")
-    # アルファベット・数字・アンダースコア以外を除去
-    s = re.sub(r"[^\w]", "", s)
-    # 連続 "_" の圧縮＆前後の "_" を除去
-    s = re.sub(r"_+", "_", s).strip("_")
-    # 先頭16文字（空なら "search"）
-    head = (s[:16] or "search").lower()
-    ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    out_dir = Path("results")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    return out_dir / f"{head}_{ts}.csv"
-
-
 class MailTextDecoder:
     def get_message_id(self, msg) -> str:
         try:
@@ -285,7 +264,8 @@ class MailTextDecoder:
 # --- パターンマッチ ---
 class SearchPattern:
     def __init__(self, egrep_pattern: str, flags=0):
-        python_pattern = self.egrep_to_python_regex(egrep_pattern)
+        self._egrep_pattern = egrep_pattern
+        python_pattern = self.egrep_to_python_regex(self._egrep_pattern)
         self._pattern = re.compile(python_pattern, flags | re.DOTALL)
 
     # --- egrep to Python正規表現（必要なら改良して下さい） ---
@@ -324,6 +304,24 @@ class SearchPattern:
                 matches.append((parttype, line))
 
         return matches
+
+    def uid(self) -> str:
+        """
+        検索文字列からデフォルト保存先:
+        <cleaned_head16>_<YYYY-MM-DD_HHMMSS>
+        - 空白は "_"、正規表現の特殊文字は除去
+        - 先頭の非特殊文字のみから最大16文字
+        """
+        # NFKC正規化 → 空白を "_" に
+        s = unicodedata.normalize("NFKC", self._egrep_pattern).replace(" ", "_")
+        # アルファベット・数字・アンダースコア以外を除去
+        s = re.sub(r"[^\w]", "", s)
+        # 連続 "_" の圧縮＆前後の "_" を除去
+        s = re.sub(r"_+", "_", s).strip("_")
+        # 先頭16文字（空なら "search"）
+        head = (s[:16] or "search").lower()
+        ts = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        return f"{head}_{ts}"
 
 
 # --- CSV出力 ---
@@ -625,13 +623,21 @@ def create_parser():
 def main():
     parser = create_parser()
     args = parser.parse_args()
-    output_path = args.output or default_output_path_from_pattern(args.pattern)
     flags = re.IGNORECASE if args.ignore_case else 0
 
     finder = MailFolder(args.source)
     decoder = MailTextDecoder()
-    matcher = SearchPattern(args.pattern, flags)
-    exporter = MailCsvExporter(finder, decoder, matcher, output_path)
+    pattern = SearchPattern(args.pattern, flags)
+    output_path: Path = Path()
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        unique_name = pattern.uid()
+        out_dir = Path("results")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        output_path = out_dir / f"{unique_name}.csv"
+
+    exporter = MailCsvExporter(finder, decoder, pattern, output_path)
     exporter.process_all()
 
 
