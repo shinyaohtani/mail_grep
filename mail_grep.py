@@ -28,6 +28,165 @@ from openpyxl.worksheet.worksheet import Worksheet
 from smart_logging import SmartLogging
 
 
+class MailIdentifiers:
+    def __init__(self, message: "MailMessage") -> None:
+        self.message_id = message._id()
+        self.date_str = message._date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
+        self.date_dt = message.date_dt()  # 並べ替え用
+        self.link = message.link()
+        self.subj = message.subject_str()
+        self.from_addr = message.from_str()
+        self.to_addr = message.to_str()
+
+    @property
+    def excel_link(self) -> str:
+        return f'=HYPERLINK("{self.link}","メール")' if self.link else ""
+
+
+class SearchHitLine:
+    def __init__(
+        self,
+        mail_keys: MailIdentifiers,
+        mail_id: int,
+        hit_count: int,
+        parttype: str,
+        line: str,
+    ):
+        self.mail_keys = mail_keys
+        self.mail_id = mail_id
+        self.hit_count = hit_count
+        self.parttype = parttype
+        self.line = line.strip()
+
+    def values(self) -> list[str | int]:
+        ret = [
+            self.mail_id,
+            self.hit_count,
+            self.mail_keys.message_id,
+            self.mail_keys.excel_link,
+            self.mail_keys.date_str,
+            self.mail_keys.from_addr,
+            self.mail_keys.to_addr,
+            self.mail_keys.subj,
+            self.parttype,
+            self.line,
+        ]
+        return [MailStringUtils.sanitize_csv_field(v) for v in ret]
+
+
+class HitReport:
+    HEADERS: list[str] = [
+        "mail_id",
+        "hit_id",
+        "message_id",
+        "link",
+        "Date",
+        "From",
+        "To",
+        "Subject",
+        "Matched Part",
+        "Matched Line",
+    ]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.hit_lines: list[SearchHitLine] = []
+
+    def mail_count(self) -> int:
+        return sum(1 for row in self.hit_lines if row.hit_count == 1)
+
+    def append_hit_line(self, line: SearchHitLine) -> None:
+        self.hit_lines.append(line)
+
+    def sort(self) -> None:
+        def _sort_key(row):
+            dt = row.mail_keys.date_dt
+            return (dt is None, -(dt.timestamp() if dt else 0))
+
+        self.hit_lines.sort(key=_sort_key)
+
+    def store(self, path: Path) -> None:
+        if path.suffix.lower() == ".csv":
+            self._store_csv(path)
+        elif path.suffix.lower() == ".xlsx":
+            self._store_xlsx(path)
+        else:
+            raise ValueError(f"Unsupported file extension: {path.suffix}")
+
+    def _store_csv(self, csv_path: Path) -> None:
+        # 4) BOM 付き UTF-8 で保存（Excel 配慮）
+        with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f)
+            # 3) 指定順のカラムでヘッダ行を書き込み
+            writer.writerow(HitReport.HEADERS)
+            for row in self.hit_lines:
+                writer.writerow(row.values())
+        logging.info(f"[MailGrep] excel {csv_path}")
+
+    def _store_xlsx(self, xlsx_path: Path) -> None:
+        """
+        XLSXで保存（openpyxl が必要）。
+        - リンク列はExcelのHYPERLINK関数を使う（CSVと同じ）
+        - 改行はCSVと同様に可視化（⏎）
+        """
+        wb: WorkbookType = Workbook()
+        ws: Worksheet = cast(Worksheet, wb.active)
+        ws.title = "results"
+
+        ws.append(HitReport.HEADERS)
+        for row in self.hit_lines:
+            ws.append(row.values())
+
+        # フィルタ機能を有効化
+        ws.auto_filter.ref = ws.dimensions
+
+        # 列幅自動調整
+        try:
+            for i, col in enumerate(
+                ws.iter_cols(
+                    min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
+                ),
+                1,
+            ):
+                max_length: int = 0
+                for cell in col:
+                    cell = cast(Cell, cell)
+                    try:
+                        cell_value: str = (
+                            str(cell.value) if cell.value is not None else ""
+                        )
+                        max_length = max(max_length, len(cell_value))
+                    except Exception:
+                        pass
+                col_letter: str = get_column_letter(i)
+                ws.column_dimensions[col_letter].width = min(max_length + 2, 60)
+        except Exception:
+            logging.warning("[MailGrep] 列幅の自動調整に失敗しました。")
+            pass
+
+        # hit_id=1のみが表示されるようにデフォルトフィルタを設定（Excelで開いたとき）
+        try:
+            from openpyxl.worksheet.filters import (
+                CustomFilter,
+                CustomFilters,
+                FilterColumn,
+            )
+
+            # hit_id列は2列目（index=1）
+            filter_col = FilterColumn(
+                colId=1,
+                customFilters=CustomFilters(
+                    customFilter=[CustomFilter(operator="equal", val="1")]
+                ),
+            )
+            ws.auto_filter.filterColumn = [filter_col]
+        except Exception:
+            logging.warning("[MailGrep] デフォルトフィルタの設定に失敗しました。")
+            pass
+        wb.save(xlsx_path)
+        logging.info(f"[MailGrep] excel {xlsx_path}")
+
+
 class MailFolder:
     def __init__(self, root_dir: Path):
         self._root_dir = root_dir
@@ -37,6 +196,13 @@ class MailFolder:
 
 
 class MailStringUtils:
+    @staticmethod
+    def sanitize_csv_field(value) -> str:
+        if value is None:
+            return ""
+        s = str(value)
+        return s.replace("\r", "").replace("\n", "⏎")
+
     @staticmethod
     def _read_emlx(path: Path) -> bytes:
         raw = path.read_bytes()
@@ -161,23 +327,12 @@ class MailStringUtils:
         return "\n".join(lines)
 
 
-class MailKeyStrings:
-    def __init__(self, message: "MailMessage") -> None:
-        self.message_id = message._id()
-        self.date_str = message._date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
-        self.date_dt = message.date_dt()  # 並べ替え用
-        self.link = message.link()
-        self.subj = message.subject_str()
-        self.from_addr = message.from_str()
-        self.to_addr = message.to_str()
-
-
 class MailMessage:
     def __init__(self, mail_path: Path):
         self._msg: Message = MailStringUtils.parse_message(mail_path)
-        self._key_strings = MailKeyStrings(self)
+        self._key_strings = MailIdentifiers(self)
 
-    def key_strings(self) -> MailKeyStrings:
+    def key_strings(self) -> MailIdentifiers:
         return self._key_strings
 
     def _id(self) -> str:
@@ -317,23 +472,6 @@ class MailMessage:
             yield self._msg
 
 
-class SearchHitLine:
-    def __init__(
-        self,
-        mail_keys: MailKeyStrings,
-        mail_id: int,
-        hit_count: int,
-        parttype: str,
-        line: str,
-    ):
-        self.mail_keys = mail_keys
-        self.mail_id = mail_id
-        self.hit_count = hit_count
-        self.parttype = parttype
-        self.line = line.strip()
-
-
-# --- パターンマッチ ---
 class SearchPattern:
     def __init__(self, egrep_pattern: str, flags=0):
         self._egrep_pattern = egrep_pattern
@@ -396,7 +534,6 @@ class SearchPattern:
         return f"{head}_{ts}"
 
 
-# --- CSV出力 ---
 class MailGrepApp:
     def __init__(
         self,
@@ -414,12 +551,12 @@ class MailGrepApp:
         self._output_path = output_path
 
     def run(self):
-        rows: list[SearchHitLine] = []
+        report: HitReport = HitReport()
         try:
             for mail_id, path in enumerate(self._storage.mail_paths(), 1):
                 try:
                     message: MailMessage = MailMessage(path)
-                    mail_keys: MailKeyStrings = message.key_strings()
+                    mail_keys: MailIdentifiers = message.key_strings()
                     for hit_count, (parttype, line) in enumerate(
                         self._pattern.match_mail(message), 1
                     ):
@@ -429,15 +566,14 @@ class MailGrepApp:
                             )
                         else:
                             print(f"✓ [{parttype}] {self.line_preview(line)}")
-                        rows.append(
-                            SearchHitLine(
-                                mail_keys,  # use date_dt as a sort key (datetime or None)
-                                mail_id,  # mail_id
-                                hit_count,  # hit_id
-                                parttype,  # Matched Part
-                                line.strip(),  # Matched Line
-                            )
+                        hit = SearchHitLine(
+                            mail_keys,  # use date_dt as a sort key (datetime or None)
+                            mail_id,  # mail_id
+                            hit_count,  # hit_id
+                            parttype,  # Matched Part
+                            line.strip(),  # Matched Line
                         )
+                        report.append_hit_line(hit)
                 except Exception as e:
                     logging.warning(f"[MailGrep] Skipped {path}: {e}")
         except KeyboardInterrupt:
@@ -445,22 +581,14 @@ class MailGrepApp:
             logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
             # 1) Date 降順でソート（None は末尾）
-            # SearchHitLine.mail_keys.date_dtで逆順ソート
-            def sort_key(row):
-                dt = row.mail_keys.date_dt
-                return (dt is None, -(dt.timestamp() if dt else 0))
-
-            rows.sort(key=sort_key)
-
-            # 2) メール件数を計算（hit_id == 1 の行のみカウント）
-            mail_count = sum(1 for row in rows if row.hit_count == 1)
+            report.sort()
 
             # 拡張子が何であろうと2種類とも保存する
-            self._write_xlsx(rows)
-            self._write_csv(rows)
-            logging.info(
-                f"[MailGrep] {mail_count}件を {self._output_path} に保存しました。"
-            )
+            report.store(self._output_path.with_suffix(".xlsx"))
+            report.store(self._output_path.with_suffix(".csv"))
+
+            # 3) メール件数をログに表示（hit_id == 1 の行のみカウント）
+            logging.info(f"[MailGrep] {report.mail_count()}件を保存しました。")
 
     @staticmethod
     def line_preview(line: str) -> str:
@@ -470,149 +598,7 @@ class MailGrepApp:
             preview = preview[:max_len] + "..."
         return preview
 
-    def _sanitize_csv_field(self, value) -> str:
-        if value is None:
-            return ""
-        s = str(value)
-        return s.replace("\r", "").replace("\n", "⏎")
 
-    def _write_csv(self, rows: list[SearchHitLine]) -> None:
-        # 4) BOM 付き UTF-8 で保存（Excel 配慮）
-        csv_path = self._output_path.with_suffix(".csv")
-        with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.writer(f)
-            # 3) 指定順のカラムでヘッダ行を書き込み
-            writer.writerow(
-                [
-                    "mail_id",
-                    "hit_id",
-                    "message_id",
-                    "link",
-                    "Date",
-                    "From",
-                    "To",
-                    "Subject",
-                    "Matched Part",
-                    "Matched Line",
-                ]
-            )
-            for row in rows:
-                excel_link = (
-                    f'=HYPERLINK("{row.mail_keys.link}","メール")'
-                    if row.mail_keys.link
-                    else ""
-                )
-                out = [
-                    row.mail_id,
-                    row.hit_count,
-                    row.mail_keys.message_id,
-                    excel_link,
-                    row.mail_keys.date_str,
-                    row.mail_keys.from_addr,
-                    row.mail_keys.to_addr,
-                    row.mail_keys.subj,
-                    row.parttype,
-                    row.line,
-                ]
-                writer.writerow([self._sanitize_csv_field(v) for v in out])
-        logging.info(f"[MailGrep] excel {csv_path}")
-
-    def _write_xlsx(self, rows: list[SearchHitLine]) -> None:
-        """
-        XLSXで保存（openpyxl が必要）。
-        - リンク列はExcelのHYPERLINK関数を使う（CSVと同じ）
-        - 改行はCSVと同様に可視化（⏎）
-        """
-
-        wb: WorkbookType = Workbook()
-        ws: Worksheet = cast(Worksheet, wb.active)
-        ws.title = "results"
-
-        headers: list[str] = [
-            "mail_id",
-            "hit_id",
-            "message_id",
-            "link",
-            "Date",
-            "From",
-            "To",
-            "Subject",
-            "Matched Part",
-            "Matched Line",
-        ]
-        ws.append(headers)
-        # フィルタ機能を有効化
-        ws.auto_filter.ref = ws.dimensions
-
-        for row in rows:
-            excel_link: str = (
-                f'=HYPERLINK("{row.mail_keys.link}","メール")'
-                if row.mail_keys.link
-                else ""
-            )
-            values: list[str | int] = [
-                row.mail_id,
-                row.hit_count,
-                self._sanitize_csv_field(row.mail_keys.message_id),
-                excel_link,
-                self._sanitize_csv_field(row.mail_keys.date_str),
-                self._sanitize_csv_field(row.mail_keys.from_addr),
-                self._sanitize_csv_field(row.mail_keys.to_addr),
-                self._sanitize_csv_field(row.mail_keys.subj),
-                self._sanitize_csv_field(row.parttype),
-                self._sanitize_csv_field(row.line),
-            ]
-            ws.append(values)
-
-        # 列幅自動調整
-        try:
-            for i, col in enumerate(
-                ws.iter_cols(
-                    min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column
-                ),
-                1,
-            ):
-                max_length: int = 0
-                for cell in col:
-                    cell = cast(Cell, cell)
-                    try:
-                        cell_value: str = (
-                            str(cell.value) if cell.value is not None else ""
-                        )
-                        max_length = max(max_length, len(cell_value))
-                    except Exception:
-                        pass
-                col_letter: str = get_column_letter(i)
-                ws.column_dimensions[col_letter].width = min(max_length + 2, 60)
-        except Exception:
-            logging.warning("[MailGrep] 列幅の自動調整に失敗しました。")
-            pass
-
-        # hit_id=1のみが表示されるようにデフォルトフィルタを設定（Excelで開いたとき）
-        try:
-            from openpyxl.worksheet.filters import (
-                CustomFilter,
-                CustomFilters,
-                FilterColumn,
-            )
-
-            # hit_id列は2列目（index=1）
-            filter_col = FilterColumn(
-                colId=1,
-                customFilters=CustomFilters(
-                    customFilter=[CustomFilter(operator="equal", val="1")]
-                ),
-            )
-            ws.auto_filter.filterColumn = [filter_col]
-        except Exception:
-            logging.warning("[MailGrep] デフォルトフィルタの設定に失敗しました。")
-            pass
-        xlsx_path = self._output_path.with_suffix(".xlsx")
-        wb.save(xlsx_path)
-        logging.info(f"[MailGrep] excel {xlsx_path}")
-
-
-# --- 引数パーサ ---
 def create_parser():
     parser = argparse.ArgumentParser(
         description="egrep風にemlxメールをgrepし、CSVに出力するツール"
@@ -640,7 +626,6 @@ def create_parser():
     return parser
 
 
-# --- メイン処理 ---
 def main():
     parser = create_parser()
     args = parser.parse_args()
