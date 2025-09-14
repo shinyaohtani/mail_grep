@@ -204,33 +204,6 @@ class MailStringUtils:
         return s.replace("\r", "").replace("\n", "⏎")
 
     @staticmethod
-    def _read_emlx(path: Path) -> bytes:
-        raw = path.read_bytes()
-        return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
-
-    @staticmethod
-    def parse_message(mail_path: Path) -> Message:
-        """
-        .emlx の長さ行をスキップしたあと、
-        ヘッダー＋本文をそのまま BytesParser に渡す
-        """
-        raw_bytes = MailStringUtils._read_emlx(mail_path)
-        # 1) 長さ行があればスキップ
-        data = raw_bytes
-        if data[:1].isdigit():
-            nl = data.find(b"\n")
-            if nl != -1:
-                data = data[nl + 1 :]
-
-        # 2) バイト列を丸ごとパース（ヘッダーも本文もそのまま）
-        parser = BytesParser(policy=policy.default)
-        try:
-            return parser.parsebytes(data)
-        except Exception:
-            # 万一エラーが起きたらフォールバック
-            return email.message_from_bytes(data, policy=policy.default)
-
-    @staticmethod
     def stringify(v: str | bytes | None) -> str:
         if v is None:
             return ""
@@ -329,7 +302,8 @@ class MailStringUtils:
 
 class MailMessage:
     def __init__(self, mail_path: Path):
-        self._msg: Message = MailStringUtils.parse_message(mail_path)
+        self._mail_path = mail_path
+        self._msg: Message = self._load()
         self._key_strings = MailIdentifiers(self)
 
     def key_strings(self) -> MailIdentifiers:
@@ -470,6 +444,32 @@ class MailMessage:
                     yield p
         else:
             yield self._msg
+
+    @staticmethod
+    def _read_emlx(mail_path: Path) -> bytes:
+        raw = mail_path.read_bytes()
+        return raw[raw.find(b"\n") + 1 :] if raw[0:1].isdigit() else raw
+
+    def _load(self) -> Message:
+        """
+        .emlx の長さ行をスキップしたあと、
+        ヘッダー＋本文をそのまま BytesParser に渡す
+        """
+        raw_bytes = self._read_emlx(self._mail_path)
+        # 1) 長さ行があればスキップ
+        data = raw_bytes
+        if data[:1].isdigit():
+            nl = data.find(b"\n")
+            if nl != -1:
+                data = data[nl + 1 :]
+
+        # 2) バイト列を丸ごとパース（ヘッダーも本文もそのまま）
+        parser = BytesParser(policy=policy.default)
+        try:
+            return parser.parsebytes(data)
+        except Exception:
+            # 万一エラーが起きたらフォールバック
+            return email.message_from_bytes(data, policy=policy.default)
 
 
 class SearchPattern:
