@@ -70,15 +70,15 @@ class MailMessage:
     def id(self) -> str:
         try:
             v = self._msg.get("Message-ID")
-            v = self._normalize_header_value(v)
-            return self._decode_header(v) if v else ""
+            v = self.stringify(v)
+            return self.decode_header(v) if v else ""
         except Exception:
             return ""
 
     def date(self) -> str:
         try:
             v = self._msg.get("Date")
-            v = self._normalize_header_value(v)
+            v = self.stringify(v)
             if not v:
                 return ""
             dt = parsedate_to_datetime(v)
@@ -86,8 +86,8 @@ class MailMessage:
         except Exception:
             try:
                 v = self._msg.get("Date")
-                v = self._normalize_header_value(v)
-                return self._decode_header(v or "")
+                v = self.stringify(v)
+                return self.decode_header(v or "")
             except Exception:
                 return ""
 
@@ -96,10 +96,10 @@ class MailMessage:
         for k in ("Subject", "From", "To", "Date"):
             try:
                 v = self._msg.get(k)
-                v = self._normalize_header_value(v)
+                v = self.stringify(v)
                 if v is None:
                     continue
-                decoded = self._decode_header(v)
+                decoded = self.decode_header(v)
                 decoded = decoded.replace("\r", "").replace("\n", " ")
                 result.append(f"{k}: {decoded}")
             except Exception as e:
@@ -156,19 +156,19 @@ class MailMessage:
         """並べ替え用に Date を datetime で返す（失敗時は None）"""
         try:
             v = self._msg.get("Date")
-            v = self._normalize_header_value(v)
+            v = self.stringify(v)
             if not v:
                 return None
             return parsedate_to_datetime(v)
         except Exception:
             return None
 
-    @staticmethod
-    def link(message_id: str) -> str:
+    def link(self) -> str:
         """
         Mail.app で開けるリンクを生成。
         形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
         """
+        message_id = self.id()
         if not message_id:
             return ""
         mid = message_id.strip()
@@ -176,6 +176,20 @@ class MailMessage:
             mid = f"<{mid}>"
         # 角括弧や@を含めて完全にエンコード（Excel でもクリック可能）
         return f"message:{quote(mid, safe='')}"
+
+    def subject_str(self) -> str:
+        subj = MailMessage.decode_header(
+            MailMessage.stringify(self._msg.get("Subject"))
+        )
+        return subj
+
+    def from_str(self) -> str:
+        from_ = MailMessage.decode_header(MailMessage.stringify(self._msg.get("From")))
+        return from_
+
+    def to_str(self) -> str:
+        to_ = MailMessage.decode_header(MailMessage.stringify(self._msg.get("To")))
+        return to_
 
     def _sanitize_header_section(self, header_str: str) -> str:
         sanitized = []
@@ -193,7 +207,8 @@ class MailMessage:
                 prev_colon = False
         return "\n".join(sanitized)
 
-    def _normalize_header_value(self, v: str | bytes | None) -> str:
+    @staticmethod
+    def stringify(v: str | bytes | None) -> str:
         if v is None:
             return ""
         if hasattr(v, "addresses"):
@@ -210,11 +225,12 @@ class MailMessage:
             return str(v)
         return v
 
-    def _decode_header(self, value: str | None) -> str:
+    @staticmethod
+    def decode_header(value: str | None) -> str:
         if value is None:
             return ""
         if isinstance(value, str):
-            value = self.remove_crlf(value)
+            value = MailMessage.remove_crlf(value)
         try:
             parts = decode_header(value)
         except Exception:
@@ -230,7 +246,7 @@ class MailMessage:
                         continue
                     except Exception as e:
                         status = f"decode_header: {enc=} decode failed ({e}), trying utf-8 ..."
-                out.append(self._decode_header_fallback(text, status))
+                out.append(MailMessage._decode_header_fallback(text, status))
             else:
                 out.append(str(text))
         return "".join(out)
@@ -254,7 +270,8 @@ class MailMessage:
             lines.append(line)
         return "\n".join(lines)
 
-    def _decode_header_fallback(self, text: bytes, status: str) -> str:
+    @staticmethod
+    def _decode_header_fallback(text: bytes, status: str) -> str:
         try:
             return text.decode("utf-8", errors="strict")
         except Exception:
@@ -304,15 +321,15 @@ class SearchPattern:
             pattern = re.sub(k, lambda m, v=v: v, pattern)
         return pattern
 
-    def match_mail(self, msg: Message, decoder: MailMessage) -> list[tuple]:
+    def match_mail(self, message: MailMessage) -> list[tuple]:
         matches: list[tuple[str, str]] = []
         # 1) ヘッダー行はこれまでどおり検索
-        for line in decoder.header_lines(msg):
+        for line in message.header_lines():
             if self._pattern.search(line):
                 matches.append(("header", line))
 
         # 2) 本文行は text/plain と text/html_textonly のみ対象
-        for line, parttype in decoder.body_lines(msg):
+        for line, parttype in message.body_lines():
             if parttype not in ("text/plain", "text/html_textonly"):
                 continue
             if self._pattern.search(line):
@@ -358,24 +375,17 @@ class MailCsvExporter:
             for path in self._finder.mail_paths():
                 try:
                     message = MailMessage(path)
-                    msg = message._msg
 
                     message_id = message.id()
                     date_str = message.date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
                     date_dt = message.date_dt()  # 並べ替え用
-                    subj = self._decoder._decode_header(
-                        self._decoder._normalize_header_value(msg.get("Subject"))
-                    )
-                    from_ = self._decoder._decode_header(
-                        self._decoder._normalize_header_value(msg.get("From"))
-                    )
-                    to_ = self._decoder._decode_header(
-                        self._decoder._normalize_header_value(msg.get("To"))
-                    )
-                    link = self._decoder.link(message_id)
+                    link = message.link()
+                    subj = message.subject_str()
+                    from_ = message.from_str()
+                    to_ = message.to_str()
 
                     hit_count = 0
-                    for parttype, line in self._matcher.match_mail(msg, self._decoder):
+                    for parttype, line in self._matcher.match_mail(message):
                         hit_count += 1
                         max_len = 50
                         preview = line.strip()
