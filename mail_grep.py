@@ -28,20 +28,6 @@ from typing import cast
 from smart_logging import SmartLogging
 
 
-def parse_date(value: str) -> str:
-    try:
-        dt = parsedate_to_datetime(value)
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
-    except Exception:
-        return value  # パース不可はそのまま
-
-
-def remove_crlf(value: str) -> str:
-    if not value:
-        return ""
-    return value.replace("\r", "").replace("\n", " ")
-
-
 class MailFileFinder:
     def __init__(self, root_dir: Path):
         self._root_dir = root_dir
@@ -237,7 +223,7 @@ class MailTextDecoder:
         if value is None:
             return ""
         if isinstance(value, str):
-            value = remove_crlf(value)
+            value = self.remove_crlf(value)
         try:
             parts = decode_header(value)
         except Exception:
@@ -288,6 +274,12 @@ class MailTextDecoder:
             f"[MailGrep] decode_header: could not decode {repr(text[:40])}, outputting raw bytes."
         )
         return repr(text)
+
+    @staticmethod
+    def remove_crlf(value: str) -> str:
+        if not value:
+            return ""
+        return value.replace("\r", "").replace("\n", " ")
 
 
 # --- パターンマッチ ---
