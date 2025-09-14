@@ -30,13 +30,13 @@ from smart_logging import SmartLogging
 
 class MailIdentifiers:
     def __init__(self, message: "MailMessage") -> None:
-        self.message_id = message._id()
-        self.date_str = message._date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
-        self.date_dt = message.date_dt()  # 並べ替え用
-        self.link = message.link()
-        self.subj = message.subject_str()
-        self.from_addr = message.from_str()
-        self.to_addr = message.to_str()
+        self.message_id: str = message._id()
+        self.date_str: str = message._date()  # 表示用（YYYY-MM-DD HH:MM:SS or 原文）
+        self.date_dt: datetime | None = message.date_dt()  # 並べ替え用
+        self.link: str = message.link()
+        self.subj: str = message.subject_str()
+        self.from_addr: str = message.from_str()
+        self.to_addr: str = message.to_str()
 
     @property
     def excel_link(self) -> str:
