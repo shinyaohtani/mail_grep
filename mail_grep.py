@@ -291,9 +291,31 @@ class MailTextDecoder:
 
 
 # --- パターンマッチ ---
-class MailPatternMatcher:
-    def __init__(self, pattern: str, flags=0):
-        self._pattern = re.compile(pattern, flags | re.DOTALL)
+class SearchPattern:
+    def __init__(self, egrep_pattern: str, flags=0):
+        python_pattern = self.egrep_to_python_regex(egrep_pattern)
+        self._pattern = re.compile(python_pattern, flags | re.DOTALL)
+
+    # --- egrep to Python正規表現（必要なら改良して下さい） ---
+    @staticmethod
+    def egrep_to_python_regex(pattern: str) -> str:
+        posix_map = {
+            r"\[[:digit:]\]": r"\d",
+            r"\[[:space:]\]": r"\s",
+            r"\[[:alnum:]\]": r"[A-Za-z0-9]",
+            r"\[[:alpha:]\]": r"[A-Za-z]",
+            r"\[[:lower:]\]": r"[a-z]",
+            r"\[[:upper:]\]": r"[A-Z]",
+            r"\[[:punct:]\]": r'[!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]',
+            r"$begin:math:display$[:blank:]$end:math:display$": r"[ \t]",
+            r"$begin:math:display$[:xdigit:]$end:math:display$": r"[A-Fa-f0-9]",
+            r"$begin:math:display$[:cntrl:]$end:math:display$": r"[\x00-\x1F\x7F]",
+            r"$begin:math:display$[:print:]$end:math:display$": r"[ -~]",
+            r"$begin:math:display$[:graph:]$end:math:display$": r"[!-~]",
+        }
+        for k, v in posix_map.items():
+            pattern = re.sub(k, lambda m, v=v: v, pattern)
+        return pattern
 
     def match_mail(self, msg: Message, decoder: MailTextDecoder) -> list[tuple]:
         matches: list[tuple[str, str]] = []
@@ -318,7 +340,7 @@ class MailCsvExporter:
         self,
         finder: MailFileFinder,
         decoder: MailTextDecoder,
-        matcher: MailPatternMatcher,
+        matcher: SearchPattern,
         output_path: Path,
     ):
         self._finder = finder
@@ -579,27 +601,6 @@ class MailCsvExporter:
         logging.info(f"[MailGrep] excel {xlsx_path}")
 
 
-# --- egrep to Python正規表現（必要なら改良して下さい） ---
-def egrep_to_python_regex(pattern: str) -> str:
-    posix_map = {
-        r"\[[:digit:]\]": r"\d",
-        r"\[[:space:]\]": r"\s",
-        r"\[[:alnum:]\]": r"[A-Za-z0-9]",
-        r"\[[:alpha:]\]": r"[A-Za-z]",
-        r"\[[:lower:]\]": r"[a-z]",
-        r"\[[:upper:]\]": r"[A-Z]",
-        r"\[[:punct:]\]": r'[!"#$%&\'()*+,\-./:;<=>?@[\\\]^_`{|}~]',
-        r"$begin:math:display$[:blank:]$end:math:display$": r"[ \t]",
-        r"$begin:math:display$[:xdigit:]$end:math:display$": r"[A-Fa-f0-9]",
-        r"$begin:math:display$[:cntrl:]$end:math:display$": r"[\x00-\x1F\x7F]",
-        r"$begin:math:display$[:print:]$end:math:display$": r"[ -~]",
-        r"$begin:math:display$[:graph:]$end:math:display$": r"[!-~]",
-    }
-    for k, v in posix_map.items():
-        pattern = re.sub(k, lambda m, v=v: v, pattern)
-    return pattern
-
-
 # --- 引数パーサ ---
 def create_parser():
     parser = argparse.ArgumentParser(
@@ -633,12 +634,11 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
     output_path = args.output or default_output_path_from_pattern(args.pattern)
-    pattern = egrep_to_python_regex(args.pattern)
     flags = re.IGNORECASE if args.ignore_case else 0
 
     finder = MailFileFinder(args.source)
     decoder = MailTextDecoder()
-    matcher = MailPatternMatcher(pattern, flags)
+    matcher = SearchPattern(args.pattern, flags)
     exporter = MailCsvExporter(finder, decoder, matcher, output_path)
     exporter.process_all()
 
