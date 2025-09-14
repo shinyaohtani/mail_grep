@@ -28,11 +28,11 @@ from typing import cast
 from smart_logging import SmartLogging
 
 
-class MailFileFinder:
+class MailFolder:
     def __init__(self, root_dir: Path):
         self._root_dir = root_dir
 
-    def find(self) -> list[Path]:
+    def mail_paths(self) -> list[Path]:
         return list(self._root_dir.rglob("*.emlx"))
 
 
@@ -330,7 +330,7 @@ class SearchPattern:
 class MailCsvExporter:
     def __init__(
         self,
-        finder: MailFileFinder,
+        finder: MailFolder,
         decoder: MailTextDecoder,
         matcher: SearchPattern,
         output_path: Path,
@@ -344,7 +344,7 @@ class MailCsvExporter:
         rows = []
         mail_id = 1
         try:
-            for path in self._finder.find():
+            for path in self._finder.mail_paths():
                 try:
                     raw = self._read_emlx(path)
                     msg = self._decoder.parse_message(raw)
@@ -628,7 +628,7 @@ def main():
     output_path = args.output or default_output_path_from_pattern(args.pattern)
     flags = re.IGNORECASE if args.ignore_case else 0
 
-    finder = MailFileFinder(args.source)
+    finder = MailFolder(args.source)
     decoder = MailTextDecoder()
     matcher = SearchPattern(args.pattern, flags)
     exporter = MailCsvExporter(finder, decoder, matcher, output_path)
