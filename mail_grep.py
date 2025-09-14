@@ -6,6 +6,8 @@ from email.message import Message
 from email.parser import BytesParser
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from typing import cast
+from typing import Generator
 from urllib.parse import quote
 import argparse
 import csv
@@ -22,8 +24,6 @@ from openpyxl.cell.cell import Cell
 from openpyxl.utils import get_column_letter
 from openpyxl.workbook.workbook import Workbook as WorkbookType
 from openpyxl.worksheet.worksheet import Worksheet
-from typing import cast
-
 
 from smart_logging import SmartLogging
 
@@ -37,7 +37,7 @@ class MailFolder:
 
 
 class MailMessage:
-    def get_message_id(self, msg) -> str:
+    def get_message_id(self, msg: Message) -> str:
         try:
             v = msg.get("Message-ID")
             v = self._normalize_header_value(v)
@@ -45,7 +45,7 @@ class MailMessage:
         except Exception:
             return ""
 
-    def get_date(self, msg) -> str:
+    def get_date(self, msg: Message) -> str:
         try:
             v = msg.get("Date")
             v = self._normalize_header_value(v)
@@ -61,7 +61,7 @@ class MailMessage:
             except Exception:
                 return ""
 
-    def extract_header_lines(self, msg) -> list[str]:
+    def extract_header_lines(self, msg: Message) -> list[str]:
         result = []
         for k in ("Subject", "From", "To", "Date"):
             try:
@@ -77,20 +77,21 @@ class MailMessage:
                 result.append(f"{k}: [INVALID HEADER]")
         return result
 
-    def extract_body_lines(self, msg) -> list[tuple[str, str]]:
+    def extract_body_lines(self, msg: Message) -> list[tuple[str, str]]:
         result = []
         for part in self._iter_text_parts(msg):
             payload = part.get_payload(decode=True)
             if not payload:
                 continue
 
-            charset = part.get_content_charset() or "utf-8"
+            charset: str = part.get_content_charset() or "utf-8"
+            html: str
             try:
-                html = payload.decode(charset, errors="replace")
+                html = bytes(payload).decode(charset, errors="replace")
             except Exception:
-                html = payload.decode("utf-8", errors="replace")
+                html = bytes(payload).decode("utf-8", errors="replace")
 
-            ctype = part.get_content_type()
+            ctype: str = part.get_content_type()
             if ctype == "text/html":
                 # ① 生HTMLをそのまま
                 result.append((html, "text/html"))
@@ -102,19 +103,19 @@ class MailMessage:
                     tag.decompose()
 
                 # ③ テキストのみ改行区切りで取得
-                text_only = soup.get_text(separator="\n", strip=True)
+                text_only: str = soup.get_text(separator="\n", strip=True)
                 for line in text_only.splitlines():
                     if line.strip():
                         result.append((line, "text/html_textonly"))
 
                 # ④ さらに全文連結版も追加
-                concat = "".join(soup.stripped_strings)
+                concat: str = "".join(soup.stripped_strings)
                 if concat:
                     result.append((concat, "text/html_concat"))
 
             else:
                 # text/plain
-                text = html
+                text: str = html
                 for line in text.splitlines():
                     if line.strip():
                         result.append((line, ctype))
@@ -141,7 +142,7 @@ class MailMessage:
             # 万一エラーが起きたらフォールバック
             return email.message_from_bytes(data, policy=policy.default)
 
-    def get_date_dt(self, msg) -> datetime | None:
+    def get_date_dt(self, msg: Message) -> datetime | None:
         """並べ替え用に Date を datetime で返す（失敗時は None）"""
         try:
             v = msg.get("Date")
@@ -152,7 +153,8 @@ class MailMessage:
         except Exception:
             return None
 
-    def build_mail_link(self, message_id: str) -> str:
+    @staticmethod
+    def build_mail_link(message_id: str) -> str:
         """
         Mail.app で開けるリンクを生成。
         形式: message:%3Cmessage-id%3E  （< と > は URL エンコード）
@@ -181,7 +183,7 @@ class MailMessage:
                 prev_colon = False
         return "\n".join(sanitized)
 
-    def _normalize_header_value(self, v):
+    def _normalize_header_value(self, v: str | bytes | None) -> str:
         if v is None:
             return ""
         if hasattr(v, "addresses"):
@@ -198,7 +200,7 @@ class MailMessage:
             return str(v)
         return v
 
-    def _decode_header(self, value) -> str:
+    def _decode_header(self, value: str | None) -> str:
         if value is None:
             return ""
         if isinstance(value, str):
@@ -223,10 +225,13 @@ class MailMessage:
                 out.append(str(text))
         return "".join(out)
 
-    def _iter_text_parts(self, msg):
+    def _iter_text_parts(self, msg: Message) -> Generator[Message, None, None]:
         if hasattr(msg, "is_multipart") and msg.is_multipart():
-            return (p for p in msg.walk() if p.get_content_type().startswith("text/"))
-        return (msg,)
+            for p in msg.walk():
+                if p.get_content_type().startswith("text/"):
+                    yield p
+        else:
+            yield msg
 
     def _decode_bytes(self, raw: bytes) -> str:
         return raw.decode("utf-8", errors="ignore")
