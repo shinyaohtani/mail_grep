@@ -1,4 +1,4 @@
-# CODE_INTRODUCTION — MailGrep プロジェクトの徹底解説
+# MailGrep プロジェクトの徹底解説
 
 このドキュメントは、リポジトリ内の主要コンポーネント（クラス／関数／定数）の「名称・役割・デザイン意図・使いどころ」を、実装の流れとともに立体的に紹介します。単なる API 紹介に留まらず、各コンポーネントがどんな“かっこよさ”を持つのか、どのように堅牢さと柔軟さを両立しているのかを丁寧に言語化します。
 
@@ -16,7 +16,7 @@
 
 ---
 
-## `hit_line.py` — `HitLine`
+## クラス`HitLine`
 
 `HitLine` はレポートの最小単位、「１つのメールの中で、パターンにヒットした１行」を表す値オブジェクトです。`mail_id`（入力順のシーケンシャル ID）、`hit_count`（同一メール内でのヒット通番）、そして本文断片やどのパートにヒットしたかを保持します。コンストラクタでは与えられた文字列行を `strip()` して余計な前後空白を削除し、以後の比較・整形で不要なノイズが混ざらないよう最初に整えておきます。
 
@@ -28,7 +28,7 @@
 
 ---
 
-## `hit_report.py` — `HitReport`
+## クラス`HitReport`
 
 `HitReport` は `HitLine` の収集・整列・保存を一手に引き受ける集計器です。内部には単純なリスト `hit_lines` を持ち、`append_hit_line()` で逐次追加、`sort()` で並べ替え、`store()` で CSV / XLSX にエクスポートします。**状態は極力小さく、操作は明確に**というポリシーで、レポート作成の制御点を３手に絞っています。
 
@@ -40,7 +40,7 @@
 
 ---
 
-## `mail_string_utils.py` — `CsvFieldText` / `AnyText` / `EncodedHeader`
+## クラス`CsvFieldText` / `AnyText` / `EncodedHeader`
 
 `CsvFieldText` は「CSV の 1 セルに安全に入る文字列」を提供するユーティリティです。`sanitize()` が CR 削除と LF→“⏎” 変換を行い、Excel での表示崩れやセル内改行による可読性低下を防ぎます。メール断片は目に見えない制御文字を含みがちですが、ここで“無害化”されるため、以降の処理は **文字列としての一貫性**に自信を持てます。
 
@@ -52,7 +52,7 @@
 
 ---
 
-## `mail_profile.py` — `MailProfile`
+## クラス `MailProfile`
 
 `MailProfile` はメール 1 通を人間の仕事にとって意味のある鍵情報へ圧縮した **不変（frozen）データクラス**です。メッセージ ID / 日付（文字列と `datetime`）/ `message:` スキームのリンク / 件名 / From / To を束ね、検索結果の各ヒット行に“文脈”を与えます。不変であることは並列処理やキャッシュ戦略にも利点をもたらし、**読み取り中心のワークロードに噛み合う**性質です。
 
@@ -64,7 +64,7 @@
 
 ---
 
-## `mail_message.py` — `_MailBlob` / `_MailHeaders` / `_MailBody` / `MailMessage`
+## クラス `_MailBlob` / `_MailHeaders` / `_MailBody` / `MailMessage`
 
 `_MailBlob` は `.emlx` ファイルの**生バイトを安全に取り出す**責務を持つ下働きです。Apple Mail 独自の先頭サイズ行を検出して取り除く処理を内包し、`BytesParser(policy=policy.default)` で `Message` へ変換します。失敗時に素朴な `email.message_from_bytes()` にフォールバックする戦略は、データの荒波に耐える“実務筋”が通っています。
 
@@ -76,7 +76,7 @@
 
 ---
 
-## `search_pattern.py` — `SearchPattern`
+## クラス `SearchPattern`
 
 `SearchPattern` は“egrep 表記を Python 正規表現に翻訳して使う”ための薄いラッパです。コンストラクタで `egrep_pattern` を受け取り、`_egrep_to_python_regex()` で POSIX 文字クラスの一部を Python 互換に写像、最後は `re.compile(..., flags | re.DOTALL)` で実戦投入。`check_line()` は `bool` を返すだけのインライン風味で、ホットパスに余計な抽象を挟まないのが心地よい設計です。
 
@@ -88,7 +88,7 @@
 
 ---
 
-## `mail_folder.py` — `MailFolder`
+## クラス `MailFolder`
 
 `MailFolder` はファイルシステム境界を抽象化する極小クラスです。`root_dir` 以下を `rglob('*.emlx')` で再帰列挙し、パス配列を返すだけ。複雑さを一切持ち込まず、**供給者としての純度**を保ちます。I/O の責務をここに閉じ込めることが、上流の `MailGrepApp` を“テストしやすい純粋関数”に近づけます。
 
@@ -100,7 +100,7 @@
 
 ---
 
-## `smart_logging.py` — `SmartLogging` / `PROJ_ABSPATH` / `trancate()` / `_OnlyMyLogsFilter`
+## クラス `SmartLogging` / `PROJ_ABSPATH` / `trancate()` / `_OnlyMyLogsFilter`
 
 `SmartLogging` は“実行時の見通し”を最大化するためのロギング環境のファサードです。コンテキストマネージャ対応で、`with SmartLogging(level): ...` と書くだけで、コンソール出力・色付け（`colorlog`）・レベル制御・フィルタ・経過時間／ログファイルパスの後処理まで一括セットアップされます。**使う側は意図（どのレベルで見たいか）だけに集中**できます。
 
@@ -112,7 +112,7 @@
 
 ---
 
-## `mail_grep.py` — `MailGrepApp` / `AppArguments` / `main()` / `line_preview()`
+## クラス `MailGrepApp` / `AppArguments` / `main()` / `line_preview()`
 
 `AppArguments` は CLI フロントエンドです。検索パターン、`--ignore-case`、`--output`、`--source` を宣言的に定義し、健康的な `argparse` 実装に仕上がっています。デフォルトのメールソースを macOS の `~/Library/Mail/V10` に設定しているため、**最短１引数で始められる**のが嬉しいところです。パース失敗時は例外で明確に落とし、呼び出し側が責任を持って対処できます。
 
