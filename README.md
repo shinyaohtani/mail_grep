@@ -1,3 +1,5 @@
+# ![mail_grep_iamge](./docs/assets/mail_grep_iamge.png)
+
 # mail_grep
 
 egrep風にemlxメールをgrepし、CSVに出力するツール
