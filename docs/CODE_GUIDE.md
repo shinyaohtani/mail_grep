@@ -169,11 +169,15 @@
 
 ## イメージキャラクター
 
+<img src="./assets/1_HitLine.png" alt="1_HitLine" style="zoom:25%;" />
+
 1. **HitLine: 星乃 瞳（ほしの ひとみ）**
 
 星の瞬きのように小さな発見を無数に届ける少女。真面目で几帳面、少し無口だが仲間と並ぶときの一体感は圧巻。改行を消してから渡すなど、清潔好きな性格。彼女たちが集まると、星座のように全体像を描き出す。
 
 ---
+
+<img src="./assets/2_HitReport.png" alt="2_HitReport" style="zoom:25%;" />
 
 2. **HitReport: 日向 大地（ひなた だいち）**
 
@@ -181,11 +185,15 @@
 
 ---
 
+<img src="./assets/3_CsvFieldText.png" alt="3_CsvFieldText" style="zoom:25%;" />
+
 3. **CsvFieldText: 澄川 清美（すみかわ きよみ）**
 
 どんなに汚れた断片も磨いて透明感を与える清掃職人系アイドル。笑顔はさわやかで、常に「すっきり」が口癖。舞台裏で目立たないが、最後の見映えを決定づける隠れた功労者。
 
 ---
+
+<img src="./assets/4_AnyText.png" alt="4_AnyText" style="zoom:25%;" />
 
 4. **AnyText: 翔子（しょうこ）**
 
@@ -193,11 +201,15 @@
 
 ---
 
+<img src="./assets/5_EncodedHeader.png" alt="5_EncodedHeader" style="zoom:25%;" />
+
 5. **EncodedHeader: 美園 解花（みその けいか）**
 
 古代の暗号や難解な文字を読み解く解読者アイドル。慎重で知的な雰囲気があり、眼鏡が似合う。成功しても失敗しても必ず記録を残す律義さで、仲間からの信頼は絶大。
 
 ---
+
+<img src="./assets/6_MailProfile.png" alt="6_MailProfile" style="zoom:25%;" />
 
 6. **MailProfile: 名取 明日香（なとり あすか）**
 
@@ -205,11 +217,15 @@
 
 ---
 
+<img src="./assets/7_MailBlob.png" alt="7_MailBlob" style="zoom:25%;" />
+
 7. **_MailBlob: 荷宮 静音（にのみや しずね）**
 
 運び屋の少女。落ち着いた声で「大丈夫、ちゃんと届けるから」と言うのが口癖。少々難物でも静かに安全に運び出す、沈着冷静な物流係。無口だが仲間想い。
 
 ---
+
+<img src="./assets/8_MailHeaders.png" alt="8_MailHeaders" style="zoom:25%;" />
 
 8. **_MailHeaders: 稲葉 由莉（いなば ゆり）**
 
@@ -217,11 +233,15 @@
 
 ---
 
+<img src="./assets/9_MailBody.png" alt="9_MailBody" style="zoom:25%;" />
+
 9. **_MailBody: 藤原 美月（ふじわら みつき）**
 
 物語の編集者。月のように多面的な輝きを持ち、原稿を三種類の姿に整える。几帳面だが柔軟で、読みやすさを何より大切にする。夜更かし気味でコーヒーが大好き。
 
 ---
+
+<img src="./assets/10_MailMessage.png" alt="10_MailMessage" style="zoom:25%;" />
 
 10. **MailMessage: 神楽 天音（かぐら あまね）**
 
@@ -229,11 +249,15 @@
 
 ---
 
+<img src="./assets/11_SearchPattern.png" alt="11_SearchPattern" style="zoom:25%;" />
+
 11. **SearchPattern: 桐生 璃子（きりゅう りこ）**
 
 探偵の羅針盤。透き通る瞳を持ち、依頼人の言葉を自分なりの勘で読み替える。責任感が強く、名前や時刻の管理も忘れない。論理派で知的な雰囲気のアイドル。
 
 ---
+
+<img src="./assets/12_MailFolder.png" alt="12_MailFolder" style="zoom:25%;" />
 
 12. **MailFolder: 小鳥遊 栞（たかなし しおり）**
 
@@ -241,11 +265,15 @@
 
 ---
 
+<img src="./assets/13_SmartLogging.png" alt="13_SmartLogging" style="zoom:25%;" />
+
 13. **SmartLogging: 灯里 彩音（あかり あやね）**
 
 照明監督アイドル。華やかで色彩感覚抜群、場を盛り上げるのが得意。ステージに光を当て、必要な部分だけを強調する。最後に「今日も最高だったね！」と締める元気さが魅力。
 
 ---
+
+<img src="./assets/14_OnlyMyLogsFilter.png" alt="14_OnlyMyLogsFilter" style="zoom:25%;" />
 
 14. **_OnlyMyLogsFilter: 森宮 静香（もりみや しずか）**
 
@@ -253,11 +281,15 @@
 
 ---
 
+<img src="./assets/15_AppArguments.png" alt="15_AppArguments" style="zoom:25%;" />
+
 15. **AppArguments: 桜庭 美羽（さくらば みう）**
 
 受付嬢アイドル。明るく元気で、初めて来た人にも優しい。質問を的確に聞き取り、必要な持ち物を整理して案内する。親しみやすく人懐っこい笑顔で、訪れる人を安心させる。
 
 ---
+
+<img src="./assets/16_MailGrepApp.png" alt="16_MailGrepApp" style="zoom:25%;" />
 
 16. **MailGrepApp: 天城 玲奈（あまぎ れな）**
 
