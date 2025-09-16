@@ -1,0 +1,12 @@
+1234
+From: Carol Example <carol@example.com>
+To: Dave Example <dave@example.com>
+Date: Tue, 2 Jan 2024 11:15:00 +0000
+Subject: Sized message
+Message-ID: <prefixed-size@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+The first line of this file is a fake byte-count that should be stripped.
+Searching for the word invoice should match this body.

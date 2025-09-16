@@ -1,0 +1,10 @@
+From: Legacy System <legacy@example.com>
+To: Accounting <accounting@example.com>
+Date: Mon, 8 Jan 2024 06:55:00 +0000
+Subject: Shift JIS body sample
+Message-ID: <non-utf8-body@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="shift_jis"
+Content-Transfer-Encoding: base64
+
+grGC6oLNkL+LgY+RgsyIxJPggsWCtw==

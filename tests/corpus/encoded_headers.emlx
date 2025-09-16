@@ -1,0 +1,11 @@
+From: =?UTF-8?B?5pys5paH?= <encoded-from@example.com>
+To: =?ISO-2022-JP?B?GyRCQk5GIzgbKEI=?= <encoded-to@example.com>
+Date: Thu, 4 Jan 2024 08:45:00 +0000
+Subject: =?UTF-8?B?44GT44KT44Gr44Gh44GvIOODg+OCueODiA==?=
+Message-ID: <encoded-headers@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+This message includes encoded headers for testing.
+The body mentions invoice and receipt keywords.

@@ -1,0 +1,10 @@
+From: No Date <nodate@example.com>
+To: Archive <archive@example.com>
+Subject: Missing date header
+Message-ID: <no-date@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+This email intentionally omits the Date header.
+Use it to verify that messages without temporal data sort last.

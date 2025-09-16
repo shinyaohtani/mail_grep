@@ -1,0 +1,15 @@
+From: Web Notifier <web@example.com>
+To: User <user@example.com>
+Date: Sat, 6 Jan 2024 12:20:00 +0000
+Subject: HTML only alert
+Message-ID: <html-only@example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+<html>
+  <body>
+    <p>This alert is provided only in HTML format.</p>
+    <p>Keyword invoice is embedded in the markup for testing.</p>
+  </body>
+</html>

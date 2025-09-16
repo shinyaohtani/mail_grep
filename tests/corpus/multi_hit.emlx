@@ -1,0 +1,11 @@
+From: Finance Bot <finance@example.com>
+To: Auditors <audit@example.com>
+Date: Fri, 5 Jan 2024 07:00:00 +0000
+Subject: Invoice audit required
+Message-ID: <multi-hit@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Invoice 2024-001 is pending review.
+Please ensure the invoice total matches the ledger entry.

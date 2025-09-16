@@ -1,0 +1,11 @@
+From: Faulty Sender <faulty@example.com>
+To: Recipient <recipient@example.com>
+Date: This is not a valid date string
+Subject: Broken header test
+Message-ID: broken-header-id.example.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+This fixture exercises error handling when headers are malformed.
+Look for the string anomaly to verify logging.

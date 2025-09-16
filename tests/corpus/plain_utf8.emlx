@@ -1,0 +1,15 @@
+From: Alice Example <alice@example.com>
+To: Bob Example <bob@example.com>
+Date: Mon, 1 Jan 2024 10:00:00 +0000
+Subject: Plain UTF8 sample
+Message-ID: <plain-utf8@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Hello Bob,
+This is a plain UTF-8 email for testing mail_grep.
+It contains multiple lines to exercise search functionality.
+
+Regards,
+Alice

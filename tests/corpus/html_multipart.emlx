@@ -1,0 +1,28 @@
+From: Events Team <events@example.com>
+To: Team <team@example.com>
+Date: Wed, 3 Jan 2024 09:30:00 +0000
+Subject: Meeting reminder
+Message-ID: <html-multipart@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="===============123456=="
+
+--===============123456==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Reminder: Team meeting at 3 PM.
+Agenda: Sprint review.
+
+--===============123456==
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+<html>
+  <head><title>Reminder</title></head>
+  <body>
+    <p>Reminder: <strong>Team meeting</strong> at 3 PM.</p>
+    <p>Agenda: Sprint review and planning.</p>
+  </body>
+</html>
+
+--===============123456==--

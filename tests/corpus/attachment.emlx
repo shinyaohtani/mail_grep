@@ -1,0 +1,22 @@
+From: Reports <reports@example.com>
+To: Storage <storage@example.com>
+Date: Sun, 7 Jan 2024 14:10:00 +0000
+Subject: Monthly report with attachment
+Message-ID: <attachment@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mixed-boundary"
+
+--mixed-boundary
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+The attached CSV provides the metrics summary.
+Search term invoice does not appear in the attachment bytes.
+
+--mixed-boundary
+Content-Type: application/octet-stream; name="report.csv"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="report.csv"
+
+Q29sdW1uMSxDb2x1bW4yCjEsMgoyLDMK
+--mixed-boundary--
