@@ -6,4 +6,5 @@ class MailFolder:
         self._root_dir = root_dir
 
     def mail_paths(self) -> list[Path]:
-        return list(self._root_dir.rglob("*.emlx"))
+        files = list(self._root_dir.rglob("*.emlx"))
+        return sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
