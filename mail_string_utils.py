@@ -11,7 +11,11 @@ class CsvFieldText:
     def sanitize(value: Any) -> str:
         s: str = CsvFieldText._to_str(value)
         # 既存仕様：CR削除、LFは ⏎ に置換
-        return s.replace("\r", "").replace("\n", "⏎")
+        s = s.replace("\r", "").replace("\n", "⏎")
+        # Excel禁止文字（制御文字）を除去
+        # ASCII 0x00〜0x1F, 0x7F
+        s = "".join(ch for ch in s if ch >= " " and ch != "\x7f")
+        return s
 
     @staticmethod
     def _to_str(value: Any) -> str:
