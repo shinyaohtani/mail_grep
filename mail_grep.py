@@ -103,6 +103,11 @@ class AppArguments:
             "-i", "--ignore-case", action="store_true", help="大文字・小文字を無視する"
         )
         parser.add_argument(
+            "--only-sent",
+            action="store_true",
+            help="送信済みメールボックスのみを対象にする",
+        )
+        parser.add_argument(
             "-o",
             "--output",
             type=Path,
@@ -123,7 +128,7 @@ def main():
     app_args = AppArguments()
     args = app_args.parse()
 
-    storage = MailFolder(args.source)
+    storage = MailFolder(args.source, only_sent=args.only_sent)
 
     flags = re.IGNORECASE if args.ignore_case else 0
     pattern = SearchPattern(args.pattern, flags)
