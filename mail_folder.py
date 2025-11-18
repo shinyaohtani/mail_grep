@@ -16,6 +16,7 @@ class MailFolder:
                     continue
             else:
                 if self._clf.is_excluded(mbox):
+                    print(f"Exclude: {mbox}")
                     continue
             emlxs.extend(mbox.rglob("*.emlx"))
         return sorted(emlxs, key=lambda p: p.stat().st_mtime, reverse=True)

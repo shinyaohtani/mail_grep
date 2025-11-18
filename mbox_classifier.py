@@ -4,7 +4,7 @@ from pathlib import Path
 import plistlib, unicodedata, re
 from typing import Iterable
 
-# 言語非依存トークン（正規化後の連結小文字文字列に部分一致）
+
 EXCLUDE_TOKENS = {
     # drafts
     "draft",
@@ -79,69 +79,76 @@ SPECIAL_ATTR_TOKENS = {
 }
 
 
-def _norm(s: str) -> str:
-    s = unicodedata.normalize("NFKC", s).lower()
-    return re.sub(r"[\s\W_]+", "", s, flags=re.UNICODE)
+class MboxClassifier:
+    """mbox の役割を言語非依存で判定する分類器。"""
 
+    # ---- 統合されたクラス内部ユーティリティ ----
+    @classmethod
+    def _norm(cls, s: str) -> str:
+        s = unicodedata.normalize("NFKC", s).lower()
+        return re.sub(r"[\s\W_]+", "", s, flags=re.UNICODE)
 
-def _strings_from_plist(plist_path: Path) -> list[str]:
-    out: list[str] = []
-    try:
-        data = plistlib.loads(plist_path.read_bytes())
-    except Exception:
+    @classmethod
+    def _strings_from_plist(cls, plist_path: Path) -> list[str]:
+        out: list[str] = []
+        try:
+            data = plistlib.loads(plist_path.read_bytes())
+        except Exception:
+            return out
+
+        def walk(v):
+            if isinstance(v, dict):
+                for vv in v.values():
+                    walk(vv)
+            elif isinstance(v, (list, tuple, set)):
+                for vv in v:
+                    walk(vv)
+            elif isinstance(v, bytes):
+                try:
+                    out.append(v.decode("utf-8", "ignore"))
+                except Exception:
+                    pass
+            elif isinstance(v, str):
+                out.append(v)
+
+        walk(data)
         return out
 
-    def walk(v):
-        if isinstance(v, dict):
-            for vv in v.values():
-                walk(vv)
-        elif isinstance(v, (list, tuple, set)):
-            for vv in v:
-                walk(vv)
-        elif isinstance(v, bytes):
-            try:
-                out.append(v.decode("utf-8", "ignore"))
-            except Exception:
-                pass
-        elif isinstance(v, str):
-            out.append(v)
+    @classmethod
+    def _hit(cls, tokens: set[str], *cands: Iterable[str]) -> bool:
+        for seq in cands:
+            for s in seq:
+                ns = cls._norm(s)
+                if any(tok in ns for tok in tokens):
+                    return True
+        return False
 
-    walk(data)
-    return out
-
-
-def _hit(tokens: set[str], *cands: Iterable[str]) -> bool:
-    for seq in cands:
-        for s in seq:
-            ns = _norm(s)
-            if any(tok in ns for tok in tokens):
-                return True
-    return False
-
-
-class MboxClassifier:
-    """mbox の“役割”を言語非依存で判定する小さな分類器。"""
-
+    # ---- 公開メソッド ----
     def is_excluded(self, mbox_dir: Path) -> bool:
-        """Drafts/Trash/Junk/Outbox/Archive/RSS/メモ…等なら True。"""
         info = mbox_dir / "Info.plist"
         if info.exists():
-            strs = _strings_from_plist(info)
-            if _hit(SPECIAL_ATTR_TOKENS, strs):  # \Drafts 等を最優先
+            strs = self._strings_from_plist(info)
+            # ① 特別属性判定（最優先）
+            if self._hit(SPECIAL_ATTR_TOKENS, strs):
                 return True
-            if _hit(EXCLUDE_TOKENS, strs):
+            # ② 下書き/迷惑/削除/ノイズ判定
+            if self._hit(EXCLUDE_TOKENS, strs):
                 return True
-        # フォールバック：ディレクトリ名・親名でも判定
+
+        # ③ フォールバック: 名前ベース
         names = [mbox_dir.name.replace(".mbox", ""), mbox_dir.parent.name]
-        return _hit(EXCLUDE_TOKENS, names)
+        hit = self._hit(EXCLUDE_TOKENS, names)
+        print(f"")
+        return hit
 
     def is_sent(self, mbox_dir: Path) -> bool:
-        """“送信済み”と判断できれば True"""
         info = mbox_dir / "Info.plist"
         if info.exists():
-            if _hit({"\\sent"}, _strings_from_plist(info)):
+            strs = self._strings_from_plist(info)
+            if self._hit({"\\sent"}, strs):
                 return True
-            if _hit(SENT_TOKENS, _strings_from_plist(info)):
+            if self._hit(SENT_TOKENS, strs):
                 return True
+
         names = [mbox_dir.name.replace(".mbox", ""), mbox_dir.parent.name]
-        return _hit(SENT_TOKENS, names)
+        return self._hit(SENT_TOKENS, names)
