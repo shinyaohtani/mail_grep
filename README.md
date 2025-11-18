@@ -1,10 +1,20 @@
-# ![mail_grep_iamge](./docs/assets/mail_grep_iamge.png)
+# ![mail_grep_image](./docs/assets/mail_grep_iamge.png)
 
 # mail_grep
 
 egrep風にemlxメールをgrepし、CSVに出力するツール
 
-### 利用例:
+## インストール
+
+このリポジトリをクローンしてローカルにインストールします。
+
+```bash
+git clone https://github.com/yourname/mail_grep.git
+cd mail_grep
+pip install .
+```
+
+## 利用例
 
 - `python -m mail_grep "Webアプリ"`
 - `python -m mail_grep -i "proxy"`
