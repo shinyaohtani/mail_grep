@@ -41,12 +41,11 @@ class MailGrepApp:
                     for hit_count, (parttype, line) in enumerate(
                         message.extract(self._pattern), 1
                     ):
-                        if hit_count == 1:
-                            print(
-                                f"✓ [{parttype}] hit! ({mail_keys.date_str}) {self.line_preview(line)}"
-                            )
-                        else:
-                            print(f"✓ [{parttype}] {self.line_preview(line)}")
+                        preview = self.line_preview(line)
+                        hitmsg = (
+                            f"hit! ({mail_keys.date_str})" if hit_count == 1 else ""
+                        )
+                        logging.info(f"✓ [{parttype}] {hitmsg} {preview}")
                         hit = HitLine(
                             mail_keys,  # use date_dt as a sort key (datetime or None)
                             mail_id,  # mail_id
@@ -58,7 +57,7 @@ class MailGrepApp:
                 except Exception as e:
                     logging.warning(f"[MailGrep] Skipped {path}: {e}")
         except KeyboardInterrupt:
-            print()
+            logging.warning("")
             logging.warning("[MailGrep]中断されました。ここまでの結果を保存します。")
         finally:
             # 1) Date 降順でソート（None は末尾）
@@ -149,6 +148,6 @@ if __name__ == "__main__":
             logging.error(
                 "Unhandled exception at top-level:\n" + traceback.format_exc()
             )
-            print("==== FATAL TRACEBACK ====")
+            logging.error("==== FATAL TRACEBACK ====")
             traceback.print_exc(file=sys.stdout)
             exit(1)

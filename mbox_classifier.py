@@ -138,7 +138,6 @@ class MboxClassifier:
         # ③ フォールバック: 名前ベース
         names = [mbox_dir.name.replace(".mbox", ""), mbox_dir.parent.name]
         hit = self._hit(EXCLUDE_TOKENS, names)
-        print(f"")
         return hit
 
     def is_sent(self, mbox_dir: Path) -> bool:
