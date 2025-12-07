@@ -28,10 +28,18 @@
 		T04 /* MboxClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T14 /* MboxClassifierTests.swift */; };
 		T05 /* MailFolderServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T15 /* MailFolderServiceTests.swift */; };
 		T06 /* LoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T16 /* LoggerTests.swift */; };
+		U01 /* ContextMenuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = U11 /* ContextMenuTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		T20 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 600 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 400;
+			remoteInfo = MailGrep;
+		};
+		U20 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 600 /* Project object */;
 			proxyType = 1;
@@ -66,6 +74,8 @@
 		T14 /* MboxClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MboxClassifierTests.swift; sourceTree = "<group>"; };
 		T15 /* MailFolderServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailFolderServiceTests.swift; sourceTree = "<group>"; };
 		T16 /* LoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerTests.swift; sourceTree = "<group>"; };
+		U10 /* MailGrepUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailGrepUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		U11 /* ContextMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextMenuTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +93,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		U30 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -91,6 +108,7 @@
 			children = (
 				301 /* MailGrep */,
 				307 /* MailGrepTests */,
+				308 /* MailGrepUITests */,
 				302 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -116,6 +134,7 @@
 			children = (
 				100 /* MailGrep.app */,
 				T10 /* MailGrepTests.xctest */,
+				U10 /* MailGrepUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -173,6 +192,14 @@
 			path = MailGrepTests;
 			sourceTree = "<group>";
 		};
+		308 /* MailGrepUITests */ = {
+			isa = PBXGroup;
+			children = (
+				U11 /* ContextMenuTests.swift */,
+			);
+			path = MailGrepUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -211,6 +238,24 @@
 			productReference = T10 /* MailGrepTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		U40 /* MailGrepUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = U50 /* Build configuration list for PBXNativeTarget "MailGrepUITests" */;
+			buildPhases = (
+				U41 /* Sources */,
+				U30 /* Frameworks */,
+				U42 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				U21 /* PBXTargetDependency */,
+			);
+			name = MailGrepUITests;
+			productName = MailGrepUITests;
+			productReference = U10 /* MailGrepUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -225,6 +270,10 @@
 						CreatedOnToolsVersion = 15.0;
 					};
 					T40 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = 400;
+					};
+					U40 = {
 						CreatedOnToolsVersion = 15.0;
 						TestTargetID = 400;
 					};
@@ -246,6 +295,7 @@
 			targets = (
 				400 /* MailGrep */,
 				T40 /* MailGrepTests */,
+				U40 /* MailGrepUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -260,6 +310,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		T42 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		U42 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -303,6 +360,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		U41 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				U01 /* ContextMenuTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -310,6 +375,11 @@
 			isa = PBXTargetDependency;
 			target = 400 /* MailGrep */;
 			targetProxy = T20 /* PBXContainerItemProxy */;
+		};
+		U21 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 400 /* MailGrep */;
+			targetProxy = U20 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -527,6 +597,40 @@
 			};
 			name = Release;
 		};
+		U52 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = MailGrep;
+			};
+			name = Debug;
+		};
+		U53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = MailGrep;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -553,6 +657,15 @@
 			buildConfigurations = (
 				T52 /* Debug */,
 				T53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		U50 /* Build configuration list for PBXNativeTarget "MailGrepUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				U52 /* Debug */,
+				U53 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

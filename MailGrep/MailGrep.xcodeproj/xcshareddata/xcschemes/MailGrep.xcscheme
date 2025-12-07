@@ -40,6 +40,17 @@
                ReferencedContainer = "container:MailGrep.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "U40"
+               BuildableName = "MailGrepUITests.xctest"
+               BlueprintName = "MailGrepUITests"
+               ReferencedContainer = "container:MailGrep.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
