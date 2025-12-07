@@ -1,5 +1,7 @@
 import Foundation
 
+private let log = CategoryLogger(category: .classifier)
+
 class MboxClassifier {
 
     private let excludeTokens: Set<String> = [
@@ -28,18 +30,17 @@ class MboxClassifier {
     func isExcluded(_ mboxDir: URL) -> Bool {
         let infoPath = mboxDir.appendingPathComponent("Info.plist")
         let mboxName = mboxDir.lastPathComponent
-        NSLog("🔎 [Classifier] isExcluded判定開始: %@", mboxName)
 
         if FileManager.default.fileExists(atPath: infoPath.path) {
             let strings = stringsFromPlist(infoPath)
-            NSLog("   📋 plistから%d個の文字列を抽出", strings.count)
+            log.debug("isExcluded判定: \(mboxName) → plistから\(strings.count)個の文字列")
 
             if let matchedToken = hitToken(specialAttrTokens, in: strings) {
-                NSLog("❌ [Classifier] %@ → 特殊属性で除外: %@", mboxName, matchedToken)
+                log.debug("\(mboxName) → 特殊属性で除外: \(matchedToken)")
                 return true
             }
             if let matchedToken = hitToken(excludeTokens, in: strings) {
-                NSLog("❌ [Classifier] %@ → plistトークンで除外: %@", mboxName, matchedToken)
+                log.debug("\(mboxName) → plistトークンで除外: \(matchedToken)")
                 return true
             }
         }
@@ -49,10 +50,9 @@ class MboxClassifier {
             mboxDir.deletingLastPathComponent().lastPathComponent
         ]
         if let matchedToken = hitToken(excludeTokens, in: names) {
-            NSLog("❌ [Classifier] %@ → フォルダ名トークンで除外: %@", mboxName, matchedToken)
+            log.debug("\(mboxName) → フォルダ名トークンで除外: \(matchedToken)")
             return true
         }
-        NSLog("✅ [Classifier] %@ → 除外対象外（処理する）", mboxName)
         return false
     }
 

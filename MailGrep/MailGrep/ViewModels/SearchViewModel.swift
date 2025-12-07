@@ -2,6 +2,8 @@ import AppKit
 import Foundation
 import SwiftUI
 
+private let log = CategoryLogger(category: .viewModel)
+
 @MainActor
 class SearchViewModel: ObservableObject {
     @Published var pattern: String = "test"
@@ -18,12 +20,12 @@ class SearchViewModel: ObservableObject {
     private let emlxParser = EmlxParser()
 
     init() {
-        NSLog("📱 [ViewModel] init() が呼ばれました")
+        log.debug("SearchViewModel初期化")
         // デバッグ用：起動時に自動検索
         Task {
-            NSLog("📱 [ViewModel] Task開始：0.5秒待機します")
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒待機
-            NSLog("📱 [ViewModel] 待機完了：search()を呼び出します")
+            log.debug("起動時自動検索：0.5秒待機")
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            log.debug("待機完了：search()呼び出し")
             self.search()
         }
     }
@@ -33,18 +35,18 @@ class SearchViewModel: ObservableObject {
     }
 
     func search() {
-        NSLog("🔍 [ViewModel] search() が呼ばれました。パターン: %@", pattern)
+        log.info("検索開始: パターン='\(pattern)' ignoreCase=\(ignoreCase) onlySent=\(onlySent)")
         guard !pattern.isEmpty else {
-            NSLog("⚠️ [ViewModel] パターンが空のため検索を中止")
+            log.warning("パターンが空のため検索中止")
             return
         }
 
         let searchPattern: SearchPattern
         do {
             searchPattern = try SearchPattern(pattern: pattern, ignoreCase: ignoreCase)
-            NSLog("✅ [ViewModel] SearchPattern作成成功")
+            log.debug("SearchPattern作成成功")
         } catch {
-            NSLog("❌ [ViewModel] SearchPattern作成失敗: %@", error.localizedDescription)
+            log.error("SearchPattern作成失敗: \(error.localizedDescription)")
             statusMessage = "無効な正規表現: \(error.localizedDescription)"
             return
         }
@@ -54,24 +56,25 @@ class SearchViewModel: ObservableObject {
         results = []
         progress = 0.0
         statusMessage = "メールを収集中..."
-        NSLog("🚀 [ViewModel] バックグラウンドタスクを開始します")
+        log.debug("バックグラウンドタスク開始")
 
         let onlySentCopy = onlySent
         Task.detached { [weak self] in
-            NSLog("🏃 [ViewModel] detachedタスク内：performSearchを呼び出します")
             await self?.performSearch(searchPattern: searchPattern, onlySent: onlySentCopy)
         }
     }
 
     private nonisolated func performSearch(searchPattern: SearchPattern, onlySent: Bool) async {
-        NSLog("📂 [検索] performSearch開始。送信済みのみ=%d", onlySent ? 1 : 0)
+        let searchLog = CategoryLogger(category: .search)
+        searchLog.info("performSearch開始: 送信済みのみ=\(onlySent)")
+
         let localMailFolderService = MailFolderService()
         let localEmlxParser = EmlxParser()
 
-        NSLog("📂 [検索] collectEmlxFiles呼び出し中...")
+        searchLog.debug("emlxファイル収集中...")
         let emlxFiles = localMailFolderService.collectEmlxFiles(onlySent: onlySent)
         let total = emlxFiles.count
-        NSLog("📂 [検索] emlxファイル総数: %d件", total)
+        searchLog.info("emlxファイル総数: \(total)件")
 
         if total == 0 {
             await MainActor.run { [weak self] in
@@ -79,6 +82,7 @@ class SearchViewModel: ObservableObject {
                 self?.isSearching = false
                 self?.searchCompleted = true
             }
+            searchLog.warning("メールが見つかりませんでした")
             return
         }
 
@@ -89,6 +93,7 @@ class SearchViewModel: ObservableObject {
         var hitLines: [HitLine] = []
         var mailID = 0
         var lineNumber = 0
+        var parseErrors = 0
 
         for (index, emlxURL) in emlxFiles.enumerated() {
             do {
@@ -145,9 +150,14 @@ class SearchViewModel: ObservableObject {
                     }
                 }
             } catch {
-                // Skip files that can't be parsed
+                parseErrors += 1
+                // パースエラーは大量に出る可能性があるためdebugレベル
+                if parseErrors <= 5 {
+                    searchLog.debug("パースエラー[\(parseErrors)]: \(SmartLogger.truncate(emlxURL.path, maxLength: 60))")
+                }
             }
 
+            // 進捗更新（100件ごと）
             if index % 100 == 0 || index == total - 1 {
                 let currentProgress = Double(index + 1) / Double(total)
                 let currentHits = hitLines.count
@@ -158,21 +168,30 @@ class SearchViewModel: ObservableObject {
             }
         }
 
+        // 検索完了
         let finalResults = hitLines
+        let finalMailCount = Set(hitLines.map { $0.profile.messageID }).count
+
+        searchLog.info("検索完了: \(finalResults.count)件ヒット（\(finalMailCount)通）、パースエラー: \(parseErrors)件")
+
         await MainActor.run { [weak self] in
             self?.results = finalResults
             self?.isSearching = false
             self?.searchCompleted = true
-            self?.statusMessage = "検索完了"
+            self?.statusMessage = "検索完了: \(finalResults.count)件ヒット（\(finalMailCount)通）"
             self?.progress = 1.0
         }
+
+        Log.finalize()
     }
 
     func openMailInApp(_ hitLine: HitLine) {
+        log.debug("メール開く: \(SmartLogger.truncate(hitLine.profile.subject, maxLength: 30))")
         mailLinkService.openInMailApp(hitLine: hitLine)
     }
 
     func exportCSV() {
+        log.info("CSVエクスポート開始")
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.commaSeparatedText]
         panel.nameFieldStringValue = "search_results.csv"
@@ -194,8 +213,9 @@ class SearchViewModel: ObservableObject {
 
         do {
             try csv.write(to: url, atomically: true, encoding: .utf8)
+            log.info("CSV保存成功: \(url.path)")
         } catch {
-            print("CSV保存エラー: \(error)")
+            log.error("CSV保存エラー: \(error.localizedDescription)")
         }
     }
 }

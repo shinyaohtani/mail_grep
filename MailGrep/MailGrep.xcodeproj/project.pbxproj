@@ -20,12 +20,14 @@
 		011 /* MboxClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111 /* MboxClassifier.swift */; };
 		012 /* MailFolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112 /* MailFolderService.swift */; };
 		013 /* MailLinkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113 /* MailLinkService.swift */; };
+		015 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117 /* Logger.swift */; };
 		014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 116 /* Assets.xcassets */; };
 		T01 /* SearchPatternTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T11 /* SearchPatternTests.swift */; };
 		T02 /* HeaderDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T12 /* HeaderDecoderTests.swift */; };
 		T03 /* EmlxParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T13 /* EmlxParserTests.swift */; };
 		T04 /* MboxClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T14 /* MboxClassifierTests.swift */; };
 		T05 /* MailFolderServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T15 /* MailFolderServiceTests.swift */; };
+		T06 /* LoggerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T16 /* LoggerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,12 +58,14 @@
 		114 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		115 /* MailGrep.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailGrep.entitlements; sourceTree = "<group>"; };
 		116 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		117 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		T10 /* MailGrepTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailGrepTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T11 /* SearchPatternTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPatternTests.swift; sourceTree = "<group>"; };
 		T12 /* HeaderDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderDecoderTests.swift; sourceTree = "<group>"; };
 		T13 /* EmlxParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmlxParserTests.swift; sourceTree = "<group>"; };
 		T14 /* MboxClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MboxClassifierTests.swift; sourceTree = "<group>"; };
 		T15 /* MailFolderServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailFolderServiceTests.swift; sourceTree = "<group>"; };
+		T16 /* LoggerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoggerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +152,7 @@
 			children = (
 				109 /* EmlxParser.swift */,
 				110 /* HeaderDecoder.swift */,
+				117 /* Logger.swift */,
 				111 /* MboxClassifier.swift */,
 				112 /* MailFolderService.swift */,
 				113 /* MailLinkService.swift */,
@@ -161,6 +166,7 @@
 				T11 /* SearchPatternTests.swift */,
 				T12 /* HeaderDecoderTests.swift */,
 				T13 /* EmlxParserTests.swift */,
+				T16 /* LoggerTests.swift */,
 				T14 /* MboxClassifierTests.swift */,
 				T15 /* MailFolderServiceTests.swift */,
 			);
@@ -277,6 +283,7 @@
 				008 /* SearchPattern.swift in Sources */,
 				009 /* EmlxParser.swift in Sources */,
 				010 /* HeaderDecoder.swift in Sources */,
+				015 /* Logger.swift in Sources */,
 				011 /* MboxClassifier.swift in Sources */,
 				012 /* MailFolderService.swift in Sources */,
 				013 /* MailLinkService.swift in Sources */,
@@ -290,6 +297,7 @@
 				T01 /* SearchPatternTests.swift in Sources */,
 				T02 /* HeaderDecoderTests.swift in Sources */,
 				T03 /* EmlxParserTests.swift in Sources */,
+				T06 /* LoggerTests.swift in Sources */,
 				T04 /* MboxClassifierTests.swift in Sources */,
 				T05 /* MailFolderServiceTests.swift in Sources */,
 			);
