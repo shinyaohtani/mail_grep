@@ -88,6 +88,16 @@ class MboxClassifier:
         s = unicodedata.normalize("NFKC", s).lower()
         return re.sub(r"[\s\W_]+", "", s, flags=re.UNICODE)
 
+    # 分類に必要なキーのみをホワイトリストで抽出
+    # （全文字列を抽出すると、ExchangeSyncState等のバイナリデータから偽陽性が発生するため）
+    CLASSIFICATION_KEYS = {
+        "MailboxName",           # 表示名（受信トレイ、送信済みアイテム等）
+        "IMAPMailboxName",       # IMAPフォルダ名
+        "SpecialMailboxType",    # 特殊メールボックスタイプ
+        "AccountPath",           # アカウントパス内のフォルダ名
+        "CriteriaCriteria",      # スマートフォルダの条件
+    }
+
     @classmethod
     def _strings_from_plist(cls, plist_path: Path) -> list[str]:
         out: list[str] = []
@@ -96,22 +106,14 @@ class MboxClassifier:
         except Exception:
             return out
 
-        def walk(v):
-            if isinstance(v, dict):
-                for vv in v.values():
-                    walk(vv)
-            elif isinstance(v, (list, tuple, set)):
-                for vv in v:
-                    walk(vv)
-            elif isinstance(v, bytes):
-                try:
-                    out.append(v.decode("utf-8", "ignore"))
-                except Exception:
-                    pass
-            elif isinstance(v, str):
-                out.append(v)
+        if not isinstance(data, dict):
+            return out
 
-        walk(data)
+        # ホワイトリストに含まれるキーの値のみを抽出
+        for key in cls.CLASSIFICATION_KEYS:
+            if key in data and isinstance(data[key], str):
+                out.append(data[key])
+
         return out
 
     @classmethod

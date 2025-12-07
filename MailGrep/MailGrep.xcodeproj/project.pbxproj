@@ -1,0 +1,555 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		001 /* MailGrepApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101 /* MailGrepApp.swift */; };
+		002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 102 /* AppDelegate.swift */; };
+		003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103 /* ContentView.swift */; };
+		004 /* ResultsTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 104 /* ResultsTableView.swift */; };
+		005 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 105 /* SearchViewModel.swift */; };
+		006 /* MailProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106 /* MailProfile.swift */; };
+		007 /* HitLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 107 /* HitLine.swift */; };
+		008 /* SearchPattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108 /* SearchPattern.swift */; };
+		009 /* EmlxParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 109 /* EmlxParser.swift */; };
+		010 /* HeaderDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110 /* HeaderDecoder.swift */; };
+		011 /* MboxClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111 /* MboxClassifier.swift */; };
+		012 /* MailFolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112 /* MailFolderService.swift */; };
+		013 /* MailLinkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113 /* MailLinkService.swift */; };
+		014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 116 /* Assets.xcassets */; };
+		T01 /* SearchPatternTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T11 /* SearchPatternTests.swift */; };
+		T02 /* HeaderDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T12 /* HeaderDecoderTests.swift */; };
+		T03 /* EmlxParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T13 /* EmlxParserTests.swift */; };
+		T04 /* MboxClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T14 /* MboxClassifierTests.swift */; };
+		T05 /* MailFolderServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T15 /* MailFolderServiceTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		T20 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 600 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 400;
+			remoteInfo = MailGrep;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		100 /* MailGrep.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MailGrep.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		101 /* MailGrepApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailGrepApp.swift; sourceTree = "<group>"; };
+		102 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		103 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		104 /* ResultsTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsTableView.swift; sourceTree = "<group>"; };
+		105 /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		106 /* MailProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailProfile.swift; sourceTree = "<group>"; };
+		107 /* HitLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HitLine.swift; sourceTree = "<group>"; };
+		108 /* SearchPattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPattern.swift; sourceTree = "<group>"; };
+		109 /* EmlxParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmlxParser.swift; sourceTree = "<group>"; };
+		110 /* HeaderDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderDecoder.swift; sourceTree = "<group>"; };
+		111 /* MboxClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MboxClassifier.swift; sourceTree = "<group>"; };
+		112 /* MailFolderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailFolderService.swift; sourceTree = "<group>"; };
+		113 /* MailLinkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailLinkService.swift; sourceTree = "<group>"; };
+		114 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		115 /* MailGrep.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailGrep.entitlements; sourceTree = "<group>"; };
+		116 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		T10 /* MailGrepTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailGrepTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		T11 /* SearchPatternTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPatternTests.swift; sourceTree = "<group>"; };
+		T12 /* HeaderDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderDecoderTests.swift; sourceTree = "<group>"; };
+		T13 /* EmlxParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmlxParserTests.swift; sourceTree = "<group>"; };
+		T14 /* MboxClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MboxClassifierTests.swift; sourceTree = "<group>"; };
+		T15 /* MailFolderServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailFolderServiceTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		200 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		T30 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		300 = {
+			isa = PBXGroup;
+			children = (
+				301 /* MailGrep */,
+				307 /* MailGrepTests */,
+				302 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		301 /* MailGrep */ = {
+			isa = PBXGroup;
+			children = (
+				101 /* MailGrepApp.swift */,
+				102 /* AppDelegate.swift */,
+				303 /* Views */,
+				304 /* ViewModels */,
+				305 /* Models */,
+				306 /* Services */,
+				116 /* Assets.xcassets */,
+				114 /* Info.plist */,
+				115 /* MailGrep.entitlements */,
+			);
+			path = MailGrep;
+			sourceTree = "<group>";
+		};
+		302 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				100 /* MailGrep.app */,
+				T10 /* MailGrepTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		303 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				103 /* ContentView.swift */,
+				104 /* ResultsTableView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		304 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				105 /* SearchViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		305 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				106 /* MailProfile.swift */,
+				107 /* HitLine.swift */,
+				108 /* SearchPattern.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		306 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				109 /* EmlxParser.swift */,
+				110 /* HeaderDecoder.swift */,
+				111 /* MboxClassifier.swift */,
+				112 /* MailFolderService.swift */,
+				113 /* MailLinkService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		307 /* MailGrepTests */ = {
+			isa = PBXGroup;
+			children = (
+				T11 /* SearchPatternTests.swift */,
+				T12 /* HeaderDecoderTests.swift */,
+				T13 /* EmlxParserTests.swift */,
+				T14 /* MboxClassifierTests.swift */,
+				T15 /* MailFolderServiceTests.swift */,
+			);
+			path = MailGrepTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		400 /* MailGrep */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 500 /* Build configuration list for PBXNativeTarget "MailGrep" */;
+			buildPhases = (
+				401 /* Sources */,
+				200 /* Frameworks */,
+				402 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MailGrep;
+			productName = MailGrep;
+			productReference = 100 /* MailGrep.app */;
+			productType = "com.apple.product-type.application";
+		};
+		T40 /* MailGrepTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = T50 /* Build configuration list for PBXNativeTarget "MailGrepTests" */;
+			buildPhases = (
+				T41 /* Sources */,
+				T30 /* Frameworks */,
+				T42 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				T21 /* PBXTargetDependency */,
+			);
+			name = MailGrepTests;
+			productName = MailGrepTests;
+			productReference = T10 /* MailGrepTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		600 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					400 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					T40 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = 400;
+					};
+				};
+			};
+			buildConfigurationList = 601 /* Build configuration list for PBXProject "MailGrep" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = ja;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				ja,
+			);
+			mainGroup = 300;
+			productRefGroup = 302 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				400 /* MailGrep */,
+				T40 /* MailGrepTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		402 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				014 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		T42 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		401 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				001 /* MailGrepApp.swift in Sources */,
+				002 /* AppDelegate.swift in Sources */,
+				003 /* ContentView.swift in Sources */,
+				004 /* ResultsTableView.swift in Sources */,
+				005 /* SearchViewModel.swift in Sources */,
+				006 /* MailProfile.swift in Sources */,
+				007 /* HitLine.swift in Sources */,
+				008 /* SearchPattern.swift in Sources */,
+				009 /* EmlxParser.swift in Sources */,
+				010 /* HeaderDecoder.swift in Sources */,
+				011 /* MboxClassifier.swift in Sources */,
+				012 /* MailFolderService.swift in Sources */,
+				013 /* MailLinkService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		T41 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				T01 /* SearchPatternTests.swift in Sources */,
+				T02 /* HeaderDecoderTests.swift in Sources */,
+				T03 /* EmlxParserTests.swift in Sources */,
+				T04 /* MboxClassifierTests.swift in Sources */,
+				T05 /* MailFolderServiceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		T21 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 400 /* MailGrep */;
+			targetProxy = T20 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		700 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		701 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		702 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MailGrep/MailGrep.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MailGrep/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrep;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		703 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = MailGrep/MailGrep.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MailGrep/Info.plist;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrep;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		T52 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MailGrep.app/Contents/MacOS/MailGrep";
+			};
+			name = Debug;
+		};
+		T53 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MailGrep.app/Contents/MacOS/MailGrep";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		500 /* Build configuration list for PBXNativeTarget "MailGrep" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				702 /* Debug */,
+				703 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		601 /* Build configuration list for PBXProject "MailGrep" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				700 /* Debug */,
+				701 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		T50 /* Build configuration list for PBXNativeTarget "MailGrepTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				T52 /* Debug */,
+				T53 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 600 /* Project object */;
+}

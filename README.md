@@ -1,4 +1,4 @@
-# ![mail_grep_image](./docs/assets/mail_grep_iamge.png)
+![mail_grep_image](./docs/assets/mail_grep_iamge.png)
 
 # mail_grep
 
@@ -22,7 +22,7 @@ pip install .
 
 ### オプション
 
-```
+```txt
 usage: mail_grep.py [-h] [-i] [-o OUTPUT] [-s SOURCE] PATTERN
 
 egrep風にemlxメールをgrepし、CSVに出力するツール

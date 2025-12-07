@@ -144,6 +144,42 @@
 
 ---
 
+## テストの実行
+
+本プロジェクトは Python 版と Swift 版の両方でユニットテストを備えています。
+
+### Python 版
+
+```bash
+# 全テスト実行
+python -m pytest tests/ -v
+
+# 特定のテストファイルのみ
+python -m pytest tests/test_mbox_classifier.py -v
+
+# 短縮出力
+python -m pytest tests/ --tb=short
+```
+
+### Swift 版（MailGrep.app）
+
+```bash
+cd MailGrep
+
+# 全テスト実行
+xcodebuild test -project MailGrep.xcodeproj -scheme MailGrep -destination 'platform=macOS'
+
+# 特定のテストクラスのみ
+xcodebuild test -project MailGrep.xcodeproj -scheme MailGrep -destination 'platform=macOS' \
+  -only-testing:MailGrepTests/MboxClassifierTests
+```
+
+### 回帰テスト
+
+`MboxClassifier` には plist 偽陽性防止の回帰テストが含まれています。これは `ExchangeSyncState` 等のバイナリデータに含まれる偶発的な文字列（"rss", "trash" 等）で受信トレイが誤って除外されるバグの再発を防止します。
+
+---
+
 ## 拡張のヒント（Future Work）
 
 - `SearchPattern` の POSIX クラス対応範囲の拡張、否定クラスやワード境界の簡易シンタックス追加。
