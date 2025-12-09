@@ -71,7 +71,8 @@ class MailFolderService {
             if url.pathExtension == "mbox" {
                 var isDirectory: ObjCBool = false
                 if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-                   isDirectory.boolValue {
+                   isDirectory.boolValue
+                {
                     result.append(url)
                 }
             }
@@ -102,7 +103,7 @@ class MailFolderService {
     }
 
     private func sortByModificationDate(_ files: [URL]) -> [URL] {
-        return files.sorted { url1, url2 in
+        files.sorted { url1, url2 in
             let date1 = (try? url1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date.distantPast
             let date2 = (try? url2.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date.distantPast
             return date1 > date2

@@ -2,7 +2,6 @@ import AppKit
 import Foundation
 
 class MailLinkService {
-
     func openInMailApp(messageID: String) {
         guard !messageID.isEmpty else { return }
 

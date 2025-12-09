@@ -1,8 +1,7 @@
-import XCTest
 @testable import MailGrep
+import XCTest
 
 final class LoggerTests: XCTestCase {
-
     // MARK: - Log Level Tests
 
     func testLogLevelComparison() {
@@ -33,13 +32,13 @@ final class LoggerTests: XCTestCase {
     }
 
     func testTruncateExactLength() {
-        let exact = "12345678901234567890"  // 20 chars
+        let exact = "12345678901234567890" // 20 chars
         XCTAssertEqual(SmartLogger.truncate(exact, maxLength: 20), exact)
     }
 
     func testTruncateDefaultLength() {
         let long = String(repeating: "a", count: 100)
-        let truncated = SmartLogger.truncate(long)  // default maxLength: 50
+        let truncated = SmartLogger.truncate(long) // default maxLength: 50
         XCTAssertEqual(truncated.count, 50)
         XCTAssertTrue(truncated.hasSuffix("..."))
     }

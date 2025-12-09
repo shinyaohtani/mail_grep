@@ -14,7 +14,7 @@ struct SearchPattern {
             options.insert(.caseInsensitive)
         }
 
-        self.regex = try NSRegularExpression(pattern: pattern, options: options)
+        regex = try NSRegularExpression(pattern: pattern, options: options)
     }
 
     func matches(_ line: String) -> Bool {

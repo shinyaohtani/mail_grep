@@ -3,7 +3,6 @@ import Foundation
 private let log = CategoryLogger(category: .classifier)
 
 class MboxClassifier {
-
     private let excludeTokens: Set<String> = [
         // drafts
         "draft", "drafts", "下書", "brouillon", "bozza", "entwurf", "borrador", "rascunho", "черновик",
@@ -16,15 +15,15 @@ class MboxClassifier {
         // archive
         "archive", "アーカイブ", "archivo", "archivio", "archiv",
         // noise
-        "rss", "メモ", "notes", "tasks", "タスク", "journal", "会話の履歴", "同期の問題", "recovered"
+        "rss", "メモ", "notes", "tasks", "タスク", "journal", "会話の履歴", "同期の問題", "recovered",
     ]
 
     private let sentTokens: Set<String> = [
-        "sent", "送信済み", "送信済みアイテム", "gesendet", "inviati", "enviados", "envoyes", "envoyés", "отправленные"
+        "sent", "送信済み", "送信済みアイテム", "gesendet", "inviati", "enviados", "envoyes", "envoyés", "отправленные",
     ]
 
     private let specialAttrTokens: Set<String> = [
-        "\\drafts", "\\junk", "\\trash", "\\deleted", "\\bin", "\\spam", "\\outbox", "\\archive"
+        "\\drafts", "\\junk", "\\trash", "\\deleted", "\\bin", "\\spam", "\\outbox", "\\archive",
     ]
 
     func isExcluded(_ mboxDir: URL) -> Bool {
@@ -47,7 +46,7 @@ class MboxClassifier {
 
         let names = [
             mboxDir.lastPathComponent.replacingOccurrences(of: ".mbox", with: ""),
-            mboxDir.deletingLastPathComponent().lastPathComponent
+            mboxDir.deletingLastPathComponent().lastPathComponent,
         ]
         if let matchedToken = hitToken(excludeTokens, in: names) {
             log.debug("\(mboxName) → フォルダ名トークンで除外: \(matchedToken)")
@@ -72,7 +71,7 @@ class MboxClassifier {
 
         let names = [
             mboxDir.lastPathComponent.replacingOccurrences(of: ".mbox", with: ""),
-            mboxDir.deletingLastPathComponent().lastPathComponent
+            mboxDir.deletingLastPathComponent().lastPathComponent,
         ]
         return hit(sentTokens, in: names)
     }
@@ -89,18 +88,19 @@ class MboxClassifier {
     /// 分類に必要なキーのみをホワイトリストで抽出
     /// （全文字列を抽出すると、ExchangeSyncState等のバイナリデータから偽陽性が発生するため）
     private let classificationKeys: Set<String> = [
-        "MailboxName",           // 表示名（受信トレイ、送信済みアイテム等）
-        "IMAPMailboxName",       // IMAPフォルダ名
-        "SpecialMailboxType",    // 特殊メールボックスタイプ
-        "AccountPath",           // アカウントパス内のフォルダ名
-        "CriteriaCriteria"       // スマートフォルダの条件
+        "MailboxName", // 表示名（受信トレイ、送信済みアイテム等）
+        "IMAPMailboxName", // IMAPフォルダ名
+        "SpecialMailboxType", // 特殊メールボックスタイプ
+        "AccountPath", // アカウントパス内のフォルダ名
+        "CriteriaCriteria", // スマートフォルダの条件
     ]
 
     private func stringsFromPlist(_ path: URL) -> [String] {
         var result: [String] = []
 
         guard let data = try? Data(contentsOf: path),
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
+              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        else {
             return result
         }
 
@@ -115,7 +115,7 @@ class MboxClassifier {
     }
 
     private func hit(_ tokens: Set<String>, in candidates: [String]) -> Bool {
-        return hitToken(tokens, in: candidates) != nil
+        hitToken(tokens, in: candidates) != nil
     }
 
     private func hitToken(_ tokens: Set<String>, in candidates: [String]) -> String? {

@@ -1,8 +1,7 @@
-import XCTest
 @testable import MailGrep
+import XCTest
 
 final class HeaderDecoderTests: XCTestCase {
-
     let decoder = HeaderDecoder()
 
     // MARK: - decode tests (7 tests)

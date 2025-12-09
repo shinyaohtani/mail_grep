@@ -130,7 +130,7 @@ class EmlxParser {
             "EEE, dd MMM yyyy HH:mm:ss ZZZZZ",
             "dd MMM yyyy HH:mm:ss Z",
             "EEE, d MMM yyyy HH:mm:ss Z",
-            "d MMM yyyy HH:mm:ss Z"
+            "d MMM yyyy HH:mm:ss Z",
         ]
 
         let formatter = DateFormatter()
@@ -150,7 +150,7 @@ class EmlxParser {
         return ("", nil)
     }
 
-    private func parseBody(_ data: Data, headers: MailHeaders) -> [(String, String)] {
+    private func parseBody(_ data: Data, headers _: MailHeaders) -> [(String, String)] {
         var result: [(String, String)] = []
 
         let contentType = extractContentType(from: data) ?? "text/plain"
@@ -223,12 +223,14 @@ class EmlxParser {
                     if partContentType == "text/html" {
                         let plainText = stripHTML(decoded)
                         for line in plainText.components(separatedBy: .newlines)
-                        where !line.trimmingCharacters(in: .whitespaces).isEmpty {
+                            where !line.trimmingCharacters(in: .whitespaces).isEmpty
+                        {
                             result.append((line, "text/html_textonly"))
                         }
                     } else {
                         for line in decoded.components(separatedBy: .newlines)
-                        where !line.trimmingCharacters(in: .whitespaces).isEmpty {
+                            where !line.trimmingCharacters(in: .whitespaces).isEmpty
+                        {
                             result.append((line, partContentType))
                         }
                     }
@@ -260,7 +262,8 @@ class EmlxParser {
         var encoding = "7bit"
         if let regex = try? NSRegularExpression(pattern: encodingPattern, options: .caseInsensitive),
            let match = regex.firstMatch(in: part, range: NSRange(part.startIndex..., in: part)),
-           let range = Range(match.range(at: 1), in: part) {
+           let range = Range(match.range(at: 1), in: part)
+        {
             encoding = String(part[range]).lowercased()
         }
 
@@ -304,7 +307,7 @@ class EmlxParser {
             guard let range = Range(match.range, in: result),
                   let hexRange = Range(match.range(at: 1), in: result) else { continue }
 
-            output += result[lastEnd..<range.lowerBound]
+            output += result[lastEnd ..< range.lowerBound]
             if !bytes.isEmpty {
                 let data = Data(bytes)
                 output += decodeBody(data, charset: charset)
@@ -329,19 +332,19 @@ class EmlxParser {
     private func charsetToEncoding(_ charset: String) -> String.Encoding {
         switch charset.lowercased() {
         case "utf-8", "utf8":
-            return .utf8
+            .utf8
         case "iso-2022-jp":
-            return .iso2022JP
+            .iso2022JP
         case "shift_jis", "shift-jis", "sjis", "x-sjis":
-            return .shiftJIS
+            .shiftJIS
         case "euc-jp", "eucjp":
-            return .japaneseEUC
+            .japaneseEUC
         case "iso-8859-1", "latin1":
-            return .isoLatin1
+            .isoLatin1
         case "us-ascii", "ascii":
-            return .ascii
+            .ascii
         default:
-            return .utf8
+            .utf8
         }
     }
 

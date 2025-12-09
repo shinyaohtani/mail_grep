@@ -15,6 +15,15 @@ struct MailGrepApp: App {
                         searchViewModel.search()
                     }
                 }
+                .onReceive(NotificationCenter.default.publisher(for: .contextMenuSearchRequested)) { notification in
+                    if let text = notification.object as? String {
+                        searchViewModel.pattern = text
+                        searchViewModel.search()
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .appWillTerminateNormally)) { _ in
+                    searchViewModel.prepareForNormalTermination()
+                }
         }
         .commands {
             CommandGroup(replacing: .newItem) {}

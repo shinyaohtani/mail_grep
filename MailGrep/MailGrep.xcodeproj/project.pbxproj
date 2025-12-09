@@ -21,6 +21,7 @@
 		012 /* MailFolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112 /* MailFolderService.swift */; };
 		013 /* MailLinkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113 /* MailLinkService.swift */; };
 		015 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117 /* Logger.swift */; };
+		016 /* SearchTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118 /* SearchTextField.swift */; };
 		014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 116 /* Assets.xcassets */; };
 		T01 /* SearchPatternTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T11 /* SearchPatternTests.swift */; };
 		T02 /* HeaderDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T12 /* HeaderDecoderTests.swift */; };
@@ -67,6 +68,7 @@
 		115 /* MailGrep.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MailGrep.entitlements; sourceTree = "<group>"; };
 		116 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		117 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
+		118 /* SearchTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchTextField.swift; sourceTree = "<group>"; };
 		T10 /* MailGrepTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MailGrepTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		T11 /* SearchPatternTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPatternTests.swift; sourceTree = "<group>"; };
 		T12 /* HeaderDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderDecoderTests.swift; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 			children = (
 				103 /* ContentView.swift */,
 				104 /* ResultsTableView.swift */,
+				118 /* SearchTextField.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -334,6 +337,7 @@
 				002 /* AppDelegate.swift in Sources */,
 				003 /* ContentView.swift in Sources */,
 				004 /* ResultsTableView.swift in Sources */,
+				016 /* SearchTextField.swift in Sources */,
 				005 /* SearchViewModel.swift in Sources */,
 				006 /* MailProfile.swift in Sources */,
 				007 /* HitLine.swift in Sources */,
@@ -525,7 +529,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrep;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aabce.MailGrep;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -554,7 +558,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrep;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aabce.MailGrep;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -571,7 +575,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aabce.MailGrepTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -589,7 +593,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aabce.MailGrepTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -606,7 +610,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aabce.MailGrepUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -623,7 +627,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 13.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.MailGrepUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aabce.MailGrepUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;

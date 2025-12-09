@@ -1,10 +1,9 @@
-import XCTest
 @testable import MailGrep
+import XCTest
 
 /// egrep互換の正規表現テスト (80テスト)
 /// 各パターンが正しくマッチし、正しくマッチしないことを確認
 final class SearchPatternTests: XCTestCase {
-
     // MARK: - 1. リテラル文字列マッチ (4テスト)
 
     /// 1. 単純な文字列マッチ
@@ -154,7 +153,7 @@ final class SearchPatternTests: XCTestCase {
 
     /// 19. クエスチョン複数適用
     func testQuestionMultipleMatch() throws {
-        let sp = try SearchPattern(pattern: "^a?b?c$", ignoreCase: false)  // アンカーで厳密マッチ
+        let sp = try SearchPattern(pattern: "^a?b?c$", ignoreCase: false) // アンカーで厳密マッチ
         XCTAssertTrue(sp.matches("c"))
         XCTAssertTrue(sp.matches("abc"))
         XCTAssertFalse(sp.matches("aabc"))
@@ -162,7 +161,7 @@ final class SearchPatternTests: XCTestCase {
 
     /// 20. オプショナルグループ
     func testQuestionGroupMatch() throws {
-        let sp = try SearchPattern(pattern: "^(un)?happy$", ignoreCase: false)  // アンカーで厳密マッチ
+        let sp = try SearchPattern(pattern: "^(un)?happy$", ignoreCase: false) // アンカーで厳密マッチ
         XCTAssertTrue(sp.matches("happy"))
         XCTAssertTrue(sp.matches("unhappy"))
         XCTAssertFalse(sp.matches("ununhappy"))
@@ -332,7 +331,7 @@ final class SearchPatternTests: XCTestCase {
         let sp = try SearchPattern(pattern: "(ab)+", ignoreCase: false)
         XCTAssertTrue(sp.matches("abab"))
         XCTAssertTrue(sp.matches("ababab"))
-        XCTAssertFalse(sp.matches("acac"))  // "ab"のシーケンスがない
+        XCTAssertFalse(sp.matches("acac")) // "ab"のシーケンスがない
     }
 
     /// 42. ネストグループ
@@ -597,7 +596,7 @@ final class SearchPatternTests: XCTestCase {
 
     /// 75. カンマ区切り数値
     func testMoneyCommaMatch() throws {
-        let sp = try SearchPattern(pattern: "^[0-9]{1,3}(,[0-9]{3})+$", ignoreCase: false)  // カンマ必須+アンカー
+        let sp = try SearchPattern(pattern: "^[0-9]{1,3}(,[0-9]{3})+$", ignoreCase: false) // カンマ必須+アンカー
         XCTAssertTrue(sp.matches("1,234,567"))
         XCTAssertFalse(sp.matches("1234567"))
     }

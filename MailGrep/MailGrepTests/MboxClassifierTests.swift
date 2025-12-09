@@ -1,8 +1,7 @@
-import XCTest
 @testable import MailGrep
+import XCTest
 
 final class MboxClassifierTests: XCTestCase {
-
     let classifier = MboxClassifier()
 
     // MARK: - isExcluded tests
@@ -96,8 +95,8 @@ final class MboxClassifierTests: XCTestCase {
         let plistData: [String: Any] = [
             "MailboxName": "受信トレイ",
             "MailboxID": "12345",
-            "ExchangeSyncState": "H4sIAAAArssAAAAEAJWYCVTPWf/Hf",  // "rss"を含む
-            "FilterEnabled": "NO"
+            "ExchangeSyncState": "H4sIAAAArssAAAAEAJWYCVTPWf/Hf", // "rss"を含む
+            "FilterEnabled": "NO",
         ]
         let plistPath = mboxDir.appendingPathComponent("Info.plist")
         let data = try PropertyListSerialization.data(fromPropertyList: plistData, format: .xml, options: 0)
@@ -119,8 +118,8 @@ final class MboxClassifierTests: XCTestCase {
 
         let plistData: [String: Any] = [
             "MailboxName": "INBOX",
-            "SyncState": "sometrashdata",  // "trash"を含む文字列
-            "CachedData": "junkspamtrashbin"  // 除外トークンを含む
+            "SyncState": "sometrashdata", // "trash"を含む文字列
+            "CachedData": "junkspamtrashbin", // 除外トークンを含む
         ]
         let plistPath = mboxDir.appendingPathComponent("Info.plist")
         let data = try PropertyListSerialization.data(fromPropertyList: plistData, format: .xml, options: 0)
@@ -139,10 +138,10 @@ final class MboxClassifierTests: XCTestCase {
         try FileManager.default.createDirectory(at: mboxDir, withIntermediateDirectories: true)
 
         let plistData: [String: Any] = [
-            "MailboxName": "仕事用",  // 通常のフォルダ名
-            "RandomKey": "draft",  // 除外トークンを含むが無視されるべき
-            "AnotherKey": "spam",  // 除外トークンを含むが無視されるべき
-            "NestedData": ["inner": "trash"]  // ネストされた除外トークン
+            "MailboxName": "仕事用", // 通常のフォルダ名
+            "RandomKey": "draft", // 除外トークンを含むが無視されるべき
+            "AnotherKey": "spam", // 除外トークンを含むが無視されるべき
+            "NestedData": ["inner": "trash"], // ネストされた除外トークン
         ]
         let plistPath = mboxDir.appendingPathComponent("Info.plist")
         let data = try PropertyListSerialization.data(fromPropertyList: plistData, format: .xml, options: 0)
@@ -175,14 +174,14 @@ final class MboxClassifierTests: XCTestCase {
         let fakeCachedData = String(repeating: "rss_feed_sync_trash_cleanup_junk_filter_spam_detection_draft_autosave_archive_indexer_bin_compactor_", count: 50)
 
         let plistData: [String: Any] = [
-            "MailboxName": "受信トレイ",  // これだけが分類に使用される
+            "MailboxName": "受信トレイ", // これだけが分類に使用される
             "MailboxID": "AAMkAGE3YjFl...",
             "ExchangeSyncState": largeSyncState,
             "CachedSyncData": fakeCachedData,
             "LastSyncTime": "2024-01-15T10:30:00Z",
             "FilterEnabled": "NO",
             "SyncStateVersion": 3,
-            "ItemCount": 1523
+            "ItemCount": 1523,
         ]
         let plistPath = mboxDir.appendingPathComponent("Info.plist")
         let data = try PropertyListSerialization.data(fromPropertyList: plistData, format: .xml, options: 0)

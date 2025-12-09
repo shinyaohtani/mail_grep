@@ -1,8 +1,7 @@
-import XCTest
 @testable import MailGrep
+import XCTest
 
 final class MailFolderServiceTests: XCTestCase {
-
     let service = MailFolderService()
 
     func testDefaultMailRoot() {

@@ -1,7 +1,6 @@
 import Foundation
 
 class HeaderDecoder {
-
     func decode(_ value: String) -> String {
         guard !value.isEmpty else { return "" }
 
@@ -22,7 +21,7 @@ class HeaderDecoder {
                   let encodingRange = Range(match.range(at: 2), in: cleaned),
                   let textRange = Range(match.range(at: 3), in: cleaned) else { continue }
 
-            result += cleaned[lastEnd..<fullRange.lowerBound]
+            result += cleaned[lastEnd ..< fullRange.lowerBound]
 
             let charset = String(cleaned[charsetRange])
             let encoding = String(cleaned[encodingRange]).uppercased()
@@ -76,8 +75,9 @@ class HeaderDecoder {
             if char == "=" {
                 let nextIndex = text.index(after: index)
                 if nextIndex < text.endIndex,
-                   let hexEndIndex = text.index(nextIndex, offsetBy: 2, limitedBy: text.endIndex) {
-                    let hex = String(text[nextIndex..<hexEndIndex])
+                   let hexEndIndex = text.index(nextIndex, offsetBy: 2, limitedBy: text.endIndex)
+                {
+                    let hex = String(text[nextIndex ..< hexEndIndex])
                     if hex.count == 2, let byte = UInt8(hex, radix: 16) {
                         bytes.append(byte)
                         index = hexEndIndex
@@ -101,29 +101,29 @@ class HeaderDecoder {
     private func charsetToEncoding(_ charset: String) -> String.Encoding {
         switch charset.lowercased() {
         case "utf-8", "utf8":
-            return .utf8
+            .utf8
         case "iso-2022-jp":
-            return .iso2022JP
+            .iso2022JP
         case "shift_jis", "shift-jis", "sjis", "x-sjis":
-            return .shiftJIS
+            .shiftJIS
         case "euc-jp", "eucjp":
-            return .japaneseEUC
+            .japaneseEUC
         case "iso-8859-1", "latin1", "latin-1":
-            return .isoLatin1
+            .isoLatin1
         case "us-ascii", "ascii":
-            return .ascii
+            .ascii
         case "big5":
-            return String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.big5.rawValue)))
+            String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.big5.rawValue)))
         case "gb2312", "gbk":
-            return String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)))
+            String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)))
         case "euc-kr":
-            return String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.EUC_KR.rawValue)))
+            String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.EUC_KR.rawValue)))
         default:
-            return .utf8
+            .utf8
         }
     }
 
     private func removeCRLF(_ value: String) -> String {
-        return value.replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: " ")
+        value.replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: " ")
     }
 }

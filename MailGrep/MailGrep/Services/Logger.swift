@@ -25,19 +25,19 @@ enum LogLevel: Int, Comparable {
 
     var osLogType: OSLogType {
         switch self {
-        case .debug: return .debug
-        case .info: return .info
-        case .warning: return .default
-        case .error: return .error
+        case .debug: .debug
+        case .info: .info
+        case .warning: .default
+        case .error: .error
         }
     }
 
     var prefix: String {
         switch self {
-        case .debug: return "🔍 DEBUG"
-        case .info: return "ℹ️ INFO"
-        case .warning: return "⚠️ WARN"
-        case .error: return "❌ ERROR"
+        case .debug: "🔍 DEBUG"
+        case .info: "ℹ️ INFO"
+        case .warning: "⚠️ WARN"
+        case .error: "❌ ERROR"
         }
     }
 }
@@ -129,7 +129,7 @@ final class SmartLogger {
         log(level: .error, message: message(), category: category, file: file, function: function, line: line)
     }
 
-    private func log(level: LogLevel, message: String, category: LogCategory, file: String, function: String, line: Int) {
+    private func log(level: LogLevel, message: String, category: LogCategory, file: String, function _: String, line: Int) {
         guard level >= effectiveLevel else { return }
 
         let elapsed = elapsedTimeString()
@@ -148,7 +148,7 @@ final class SmartLogger {
     }
 
     private func writeToFile(_ message: String) {
-        guard let fileHandle = fileHandle,
+        guard let fileHandle,
               let data = (message + "\n").data(using: .utf8) else { return }
         fileHandle.write(data)
     }
@@ -240,7 +240,7 @@ final class ScopedLog {
     init(_ message: String, category: LogCategory = .app, file: String = #file, function: String = #function, line: Int = #line) {
         self.message = message
         self.category = category
-        self.startTime = Date()
+        startTime = Date()
         self.file = file
         self.function = function
         self.line = line

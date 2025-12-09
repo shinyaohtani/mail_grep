@@ -1,17 +1,16 @@
-import XCTest
 @testable import MailGrep
+import XCTest
 
 final class EmlxParserTests: XCTestCase {
-
     let parser = EmlxParser()
 
     var corpusPath: URL {
         // MailGrep/MailGrepTests -> MailGrep -> mail_grep -> tests/corpus
         let testBundle = Bundle(for: type(of: self))
         let testsDir = URL(fileURLWithPath: #file)
-            .deletingLastPathComponent()  // MailGrepTests
-            .deletingLastPathComponent()  // MailGrep
-            .deletingLastPathComponent()  // mail_grep
+            .deletingLastPathComponent() // MailGrepTests
+            .deletingLastPathComponent() // MailGrep
+            .deletingLastPathComponent() // mail_grep
             .appendingPathComponent("tests/corpus")
         return testsDir
     }
