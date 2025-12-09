@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var viewModel: SearchViewModel
+    @StateObject private var viewModel = SearchViewModel()
 
     var body: some View {
         VStack(spacing: 0) {

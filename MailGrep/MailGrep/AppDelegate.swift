@@ -4,6 +4,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let serviceProvider = ServiceProvider()
 
     func applicationDidFinishLaunching(_: Notification) {
+        // ウィンドウ状態の復元を無効化（起動時は常に1ウィンドウ）
+        UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
+
         NSApp.servicesProvider = serviceProvider
         NSUpdateDynamicServices()
 
@@ -84,19 +87,8 @@ class PermissionChecker {
 
         DispatchQueue.main.async {
             let alert = NSAlert()
-            alert.messageText = "フルディスクアクセス権限が必要です"
-            alert.informativeText = """
-            MailGrepがメールデータにアクセスするには「フルディスクアクセス」権限が必要です。
-
-            以下の手順で権限を付与してください：
-            1. 「システム設定を開く」をクリック
-            2. 「フルディスクアクセス」を選択
-            3. 「+」をクリックしてこのアプリを追加：
-               \(self.currentAppPath())
-            4. アプリを再起動
-
-            ※ 複数のMailGrep.appが存在する場合は、現在使用しているアプリを追加してください。
-            """
+            alert.messageText = "メールへのアクセス許可が必要です"
+            alert.informativeText = "システム設定で MailGrep を「フルディスクアクセス」に追加してください。"
             alert.alertStyle = .warning
             alert.addButton(withTitle: "システム設定を開く")
             alert.addButton(withTitle: "後で")

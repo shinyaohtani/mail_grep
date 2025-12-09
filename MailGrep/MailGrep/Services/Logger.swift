@@ -148,9 +148,13 @@ final class SmartLogger {
     }
 
     private func writeToFile(_ message: String) {
-        guard let fileHandle,
+        guard let handle = fileHandle,
               let data = (message + "\n").data(using: .utf8) else { return }
-        fileHandle.write(data)
+        do {
+            try handle.write(contentsOf: data)
+        } catch {
+            // ファイル書き込みエラーは無視（クローズ後の書き込み試行など）
+        }
     }
 
     // MARK: - Utilities
@@ -190,6 +194,7 @@ final class SmartLogger {
         }
         queue.sync {
             try? fileHandle?.close()
+            fileHandle = nil
         }
     }
 

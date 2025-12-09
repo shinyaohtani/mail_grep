@@ -23,6 +23,9 @@ class SearchViewModel: ObservableObject {
     /// 現在の検索タスク（キャンセル用）
     private var currentSearchTask: Task<Void, Never>?
 
+    /// 履歴同期用の通知オブザーバー
+    private var historyObserver: NSObjectProtocol?
+
     // UserDefaults keys
     private static let currentKeywordKey = "currentSearchKeyword"
     private static let searchHistoryKey = "searchHistory"
@@ -32,6 +35,36 @@ class SearchViewModel: ObservableObject {
     init() {
         log.debug("SearchViewModel初期化")
         loadState()
+        setupHistoryObserver()
+    }
+
+    deinit {
+        if let observer = historyObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    /// 履歴更新通知のオブザーバーを設定
+    private func setupHistoryObserver() {
+        historyObserver = NotificationCenter.default.addObserver(
+            forName: .searchHistoryUpdated,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.reloadHistoryFromDefaults()
+            }
+        }
+    }
+
+    /// UserDefaultsから履歴を再読み込み（他のウィンドウから更新された場合）
+    private func reloadHistoryFromDefaults() {
+        if let history = UserDefaults.standard.stringArray(forKey: Self.searchHistoryKey) {
+            if history != searchHistory {
+                searchHistory = history
+                log.debug("履歴を他のウィンドウから同期: \(history.count)件")
+            }
+        }
     }
 
     /// 状態をUserDefaultsから読み込む
@@ -92,6 +125,9 @@ class SearchViewModel: ObservableObject {
         // 保存
         UserDefaults.standard.set(searchHistory, forKey: Self.searchHistoryKey)
         log.debug("検索履歴追加: '\(keyword)' (計\(searchHistory.count)件)")
+
+        // 他のウィンドウに通知
+        NotificationCenter.default.post(name: .searchHistoryUpdated, object: nil)
     }
 
     /// 検索履歴をクリア
@@ -99,6 +135,9 @@ class SearchViewModel: ObservableObject {
         searchHistory = []
         UserDefaults.standard.removeObject(forKey: Self.searchHistoryKey)
         log.debug("検索履歴クリア")
+
+        // 他のウィンドウに通知
+        NotificationCenter.default.post(name: .searchHistoryUpdated, object: nil)
     }
 
     /// 履歴から検索キーワードを選択（テキストボックスに入力するだけ）

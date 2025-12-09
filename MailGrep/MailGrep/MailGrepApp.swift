@@ -3,34 +3,33 @@ import SwiftUI
 @main
 struct MailGrepApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var searchViewModel = SearchViewModel()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "search") {
             ContentView()
-                .environmentObject(searchViewModel)
-                .onReceive(NotificationCenter.default.publisher(for: .serviceSearchRequested)) { notification in
-                    if let text = notification.object as? String {
-                        searchViewModel.pattern = text
-                        searchViewModel.search()
-                    }
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .contextMenuSearchRequested)) { notification in
-                    if let text = notification.object as? String {
-                        searchViewModel.pattern = text
-                        searchViewModel.search()
-                    }
-                }
-                .onReceive(NotificationCenter.default.publisher(for: .appWillTerminateNormally)) { _ in
-                    searchViewModel.prepareForNormalTermination()
-                }
         }
         .commands {
-            CommandGroup(replacing: .newItem) {}
+            // 新規ウィンドウメニュー - OpenWindowActionを使用
+            CommandGroup(replacing: .newItem) {
+                OpenNewWindowButton()
+            }
         }
+    }
+}
+
+/// 新規ウィンドウを開くボタン（@EnvironmentをView内で使用するため）
+struct OpenNewWindowButton: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("新規検索ウィンドウ") {
+            openWindow(id: "search")
+        }
+        .keyboardShortcut("n", modifiers: .command)
     }
 }
 
 extension Notification.Name {
     static let serviceSearchRequested = Notification.Name("serviceSearchRequested")
+    static let searchHistoryUpdated = Notification.Name("searchHistoryUpdated")
 }
