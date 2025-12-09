@@ -21,4 +21,16 @@ struct HitLine: Identifiable, Hashable {
             .replacingOccurrences(of: "\"", with: "\"\"")
         return "\(mailID),\"\(dateStr)\",\"\(sanitizedSubject)\",\"\(fromAddr)\",\"\(toAddr)\",\"\(sanitizedLine)\""
     }
+
+    /// Excel用リンク列を含むCSV行を生成
+    func csvRowWithLink(excelLink: String) -> String {
+        let sanitizedLine = matchedLine
+            .replacingOccurrences(of: "\"", with: "\"\"")
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+        let sanitizedSubject = subject
+            .replacingOccurrences(of: "\"", with: "\"\"")
+        // Excel関数はダブルクォートで囲まない（関数として認識させるため）
+        return "\(mailID),\(excelLink),\"\(dateStr)\",\"\(sanitizedSubject)\",\"\(fromAddr)\",\"\(toAddr)\",\"\(sanitizedLine)\""
+    }
 }

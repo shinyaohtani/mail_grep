@@ -345,10 +345,11 @@ class SearchViewModel: ObservableObject {
 
     private func saveCSV(to url: URL) {
         var csv = "\u{FEFF}" // BOM for UTF-8
-        csv += "No,日付,件名,From,To,マッチ行\n"
+        csv += "No,リンク,日付,件名,From,To,マッチ行\n"
 
         for hitLine in results {
-            csv += hitLine.csvRow() + "\n"
+            let excelLink = mailLinkService.generateExcelLink(messageID: hitLine.profile.messageID)
+            csv += hitLine.csvRowWithLink(excelLink: excelLink) + "\n"
         }
 
         do {
